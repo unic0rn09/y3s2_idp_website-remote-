@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block header_title %}Patient Records{% endblock %}
+<!-- {% block header_subtitle %}View, Edit, or Delete patient records{% endblock %} -->
+
+{% block content %}
+<div id="undoToast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-5 py-3 rounded-lg shadow-2xl z-[100] flex items-center space-x-4 transition-all duration-300 translate-y-[-150%] opacity-0">
+    <div class="flex items-center space-x-2">
+        <i class="fas fa-check-circle text-green-400"></i>
+        <span class="text-sm font-medium">Patient deleted from records.</span>
+    </div>
+    <div class="border-l border-gray-600 pl-4">
+        <button onclick="undoDelete()" class="text-yellow-400 hover:text-yellow-300 font-bold text-sm uppercase tracking-wide focus:outline-none transition">Undo</button>
+    </div>
+</div>
+
+<div class="bg-white border rounded-xl shadow-sm overflow-hidden relative">
+    <div class="p-4 border-b flex justify-end bg-gray-50">
+        <div class="relative w-72">
+            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+            <input type="text" id="histSearch" placeholder="Search by name or IC..." class="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+    </div>
+
+    <table class="w-full text-left text-sm">
+        <thead class="text-xs text-gray-500 uppercase bg-white border-b">
+            <tr>
+                <th class="py-4 px-6 font-semibold">Patient Info</th>
+                <th class="py-4 px-6 font-semibold">Visits</th>
+                <th class="py-4 px-6 font-semibold">Date Added</th>
+                <th class="py-4 px-6 font-semibold text-right">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100" id="histTableBody">
+            {% for p in history %}
+            <tr class="hover:bg-gray-50 transition hist-row" id="patient-row-{{ p.id }}">
+                <td class="py-4 px-6">
+                    <div class="font-bold text-gray-800 hist-name">{{ p.name }}</div>
+                    <div class="text-xs text-gray-500 hist-ic">IC: {{ p.ic }}</div>
+                </td>
+                <td class="py-4 px-6 text-gray-600 font-medium">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-bold">{{ p.visits|default('1') }} Visit(s)</span>
+                </td>
+                <td class="py-4 px-6 text-gray-600">
+                    <div>{{ p.date_added.strftime('%Y-%m-%d') }}</div>
+                    <div class="text-xs text-gray-400">{{ p.date_added.strftime('%H:%M') }}</div>
+                </td>
+                <td class="py-4 px-6 text-right">
+                    <div class="flex justify-end space-x-2">
+                        <a href="/edit_patient_full/{{ p.id }}" class="text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 w-8 h-8 rounded flex items-center justify-center transition" title="Full Edit Profile">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button onclick="confirmDelete('{{ p.id }}', '{{ p.name }}')" class="text-gray-500 hover:text-red-600 bg-gray-100 hover:bg-red-50 w-8 h-8 rounded flex items-center justify-center transition" title="Delete Patient">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            {% if not history %}
+            <tr>
+                <td colspan="4" class="text-center py-6 text-gray-500">No patient records found.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<div id="deleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-[60]">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden p-6 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+        </div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">Delete Patient</h3>
+        <p class="text-sm text-gray-500 mb-6">Are you sure you want to permanently delete <span id="delPatientName" class="font-bold text-gray-900"></span>?</p>
+        
+        <form id="deleteForm" class="flex space-x-3">
+            <button type="button" onclick="closeDeleteModal()" class="w-1/2 py-2.5 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="w-1/2 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">Yes, Delete</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // UNDO DELETE LOGIC
+    let pendingDeleteId = null;
+    let deleteTimeout = null;
+
+    function confirmDelete(id, name) {
+        pendingDeleteId = id; 
+        document.getElementById('delPatientName').innerText = name;
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+    function closeDeleteModal() { document.getElementById('deleteModal').classList.add('hidden'); }
+
+    document.getElementById('deleteForm').addEventListener('submit', function(e) {
+        e.preventDefault(); 
+        closeDeleteModal();
+
+        let row = document.getElementById('patient-row-' + pendingDeleteId);
+        if(row) row.style.display = 'none';
+
+        let toast = document.getElementById('undoToast');
+        toast.classList.remove('translate-y-[-150%]', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+
+        deleteTimeout = setTimeout(() => {
+            fetch('/delete_patient/' + pendingDeleteId, { method: 'POST' })
+            .then(response => { if(row) row.remove(); }); 
+            hideToast();
+        }, 5000); 
+    });
+
+    function undoDelete() {
+        clearTimeout(deleteTimeout);
+        let row = document.getElementById('patient-row-' + pendingDeleteId);
+        if(row) row.style.display = 'table-row';
+
+        hideToast();
+        pendingDeleteId = null;
+    }
+
+    function hideToast() {
+        let toast = document.getElementById('undoToast');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-[-150%]', 'opacity-0');
+    }
+
+    document.getElementById('histSearch').addEventListener('keyup', function(e) {
+        let val = e.target.value.toLowerCase();
+        document.querySelectorAll('.hist-row').forEach(row => {
+            let name = row.querySelector('.hist-name').innerText.toLowerCase();
+            let ic = row.querySelector('.hist-ic').innerText.toLowerCase();
+            row.style.display = (name.includes(val) || ic.includes(val)) ? 'table-row' : 'none';
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - E.M.M.A.S</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Subtle entrance animation for the login card */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        /* Custom input autofill styling to maintain design */
+        input:-webkit-autofill {
+            -webkit-box-shadow: 0 0 0 30px white inset !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex text-gray-800 bg-gray-50 overflow-hidden">
+
+    <div class="hidden md:flex md:w-1/2 relative bg-gray-900 overflow-hidden">
+        <div class="absolute inset-0 bg-cover bg-center opacity-70" style="background-image: url('/static/login_page.png');"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+        
+        <div class="relative z-10 p-12 lg:p-20 flex flex-col justify-center h-full w-full">
+            <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/20 shadow-xl">
+                <i class="fas fa-heartbeat text-3xl text-white"></i>
+            </div>
+            <h1 class="text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-white tracking-tight">
+                Revolutionizing<br>
+                <span class="text-blue-300">Healthcare</span><br>
+                Documentation
+            </h1>
+            <p class="text-lg text-blue-100 font-medium max-w-md leading-relaxed opacity-90">
+                Powered by E.M.M.A.S — The Enhanced Malaysian Medical AI Scribe. Focus on your patients, let AI handle the notes.
+            </p>
+            
+            <div class="absolute bottom-12 left-12 lg:left-20 flex items-center space-x-4 opacity-75">
+                <div class="flex -space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-blue-400 border-2 border-blue-900 flex items-center justify-center"><i class="fas fa-shield-alt text-white text-xs"></i></div>
+                    <div class="w-8 h-8 rounded-full bg-teal-400 border-2 border-blue-900 flex items-center justify-center"><i class="fas fa-lock text-white text-xs"></i></div>
+                </div>
+                <span class="text-sm text-blue-100 font-medium">Secure & Encrypted</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-blue-100 opacity-50 blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-teal-50 opacity-50 blur-3xl"></div>
+
+        <div class="w-full max-w-md bg-white p-8 sm:p-10 rounded-[2rem] shadow-2xl shadow-blue-900/5 border border-gray-100 relative z-10 animate-slide-up">
+            
+            <div class="text-center mb-8">
+                <img src="/static/um_logo.png" alt="E.M.M.A.S Logo" class="mx-auto h-32 w-auto mb-4 object-contain transform transition hover:scale-105 drop-shadow-md">
+                
+                <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-2">
+                    <span class="bg-clip-text text-transparent bg-gradient-to-r from-blue-800 via-blue-600 to-blue-500">
+                        E.M.M.A.S
+                    </span>
+                </h2>
+                
+                <p class="text-sm sm:text-base text-gray-600 font-medium mb-1">Enhanced Malaysian Medical AI Scribe</p>
+                <p class="text-xs text-gray-400 uppercase tracking-wide font-semibold mt-4 border-t border-gray-100 pt-4">Sign in to your account</p>
+            </div>
+
+            <form action="/login" method="POST" class="space-y-5">
+                
+                <div class="relative flex w-full p-1 bg-gray-100/80 rounded-xl mb-6 shadow-inner border border-gray-200/50">
+                    <div id="toggleBg" class="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm border border-gray-200/50 transition-all duration-300 ease-out"></div>
+                    
+                    <button type="button" id="btnNurse" class="relative w-1/2 py-2.5 text-sm font-bold text-blue-700 transition-colors duration-300 z-10" onclick="selectRole('nurse')">
+                        <i class="fas fa-user-nurse mr-2"></i>Nurse
+                    </button>
+                    <button type="button" id="btnDoctor" class="relative w-1/2 py-2.5 text-sm font-medium text-gray-500 transition-colors duration-300 z-10" onclick="selectRole('doctor')">
+                        <i class="fas fa-user-md mr-2"></i>Doctor
+                    </button>
+                </div>
+                <input type="hidden" name="role" id="roleInput" value="nurse">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 ml-1">Email Address</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-envelope text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <input type="email" name="email" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-800 placeholder-gray-400" placeholder="name@hospital.com" required>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2 ml-1">
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">Password</label>
+                        <a href="#" class="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
+                    </div>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-lock text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <input type="password" name="password" class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-800 placeholder-gray-400" placeholder="••••••••" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 ml-1">Zone</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-layer-group text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <select name="zone" class="w-full pl-11 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-700 appearance-none cursor-pointer" required>
+                            <option value="Green Zone" selected>Green Zone</option>
+                            <option value="Yellow Zone" disabled class="text-gray-400 bg-gray-100">Yellow Zone</option>
+                            <option value="Red Zone" disabled class="text-gray-400 bg-gray-100">Red Zone</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="roomSelection" class="hidden animate-slide-up" style="animation-duration: 0.3s;">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 ml-1">Consultation Room</label>
+                    <div class="relative group">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-door-open text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                        </div>
+                        <select name="room" class="w-full pl-11 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-700 appearance-none cursor-pointer">
+                            <option value="" disabled selected>Select Room Assignment</option>
+                            {% for room in available_rooms %}
+                                {% if room in occupied_rooms %}
+                                    <option value="{{ room }}" disabled class="text-gray-400 bg-gray-100">Room {{ room }} (Occupied)</option>
+                                {% else %}
+                                    <option value="{{ room }}">Room {{ room }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                            <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 mt-2 ml-1"><i class="fas fa-info-circle mr-1"></i>Logging in will mark this room as occupied.</p>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white py-3.5 rounded-xl font-bold tracking-wide shadow-lg shadow-blue-600/30 hover:shadow-blue-600/40 transition-all duration-200 transform hover:-translate-y-0.5 flex justify-center items-center">
+                        Sign In <i class="fas fa-arrow-right ml-2 text-sm"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function selectRole(role) {
+            // Update hidden input for form submission
+            document.getElementById('roleInput').value = role;
+            
+            const btnNurse = document.getElementById('btnNurse');
+            const btnDoctor = document.getElementById('btnDoctor');
+            const toggleBg = document.getElementById('toggleBg');
+            const roomSection = document.getElementById('roomSelection');
+
+            if (role === 'doctor') {
+                // Move the white pill background to the right
+                toggleBg.style.transform = 'translateX(100%)';
+                
+                // Update text styles
+                btnDoctor.classList.replace('text-gray-500', 'text-blue-700');
+                btnDoctor.classList.replace('font-medium', 'font-bold');
+                
+                btnNurse.classList.replace('text-blue-700', 'text-gray-500');
+                btnNurse.classList.replace('font-bold', 'font-medium');
+                
+                // Show room selection for doctor
+                roomSection.classList.remove('hidden');
+            } else {
+                // Move the white pill background to the left
+                toggleBg.style.transform = 'translateX(0)';
+                
+                // Update text styles
+                btnNurse.classList.replace('text-gray-500', 'text-blue-700');
+                btnNurse.classList.replace('font-medium', 'font-bold');
+                
+                btnDoctor.classList.replace('text-blue-700', 'text-gray-500');
+                btnDoctor.classList.replace('font-bold', 'font-medium');
+                
+                // Hide room selection for nurse
+                roomSection.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

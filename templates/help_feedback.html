@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Center - E.M.M.A.S</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Clinical typography styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .step-transition { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 flex flex-col min-h-screen text-slate-800">
+
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-700 text-white px-2.5 py-1 rounded text-sm font-bold tracking-wide">IDP</div>
+            <div class="font-semibold text-lg text-slate-900 leading-none">E.M.M.A.S <span class="text-sm font-normal text-slate-500 ml-1 border-l border-slate-300 pl-2">Support Center</span></div>
+        </div>
+        <button onclick="window.close()" class="text-sm font-medium text-slate-500 hover:text-slate-900 transition flex items-center">
+            <i class="fas fa-times mr-1.5"></i> Close Window
+        </button>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center p-6">
+        <div class="bg-white rounded-lg shadow-sm border border-slate-200 w-full max-w-xl overflow-hidden">
+            
+            <div class="bg-slate-50 border-b border-slate-200 px-8 py-4">
+                <div class="flex items-center justify-between relative">
+                    <div class="absolute left-0 top-1/2 transform -translate-y-1/2 w-full h-1 bg-slate-200 z-0"></div>
+                    <div id="progress-line" class="absolute left-0 top-1/2 transform -translate-y-1/2 h-1 bg-blue-600 z-0 transition-all duration-300 w-0"></div>
+                    
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="ind-1" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-slate-50 transition-colors">1</div>
+                        <span class="text-[10px] font-semibold text-slate-500 mt-2 uppercase tracking-wider">Topic</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="ind-2" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-slate-50 transition-colors">2</div>
+                        <span class="text-[10px] font-semibold text-slate-500 mt-2 uppercase tracking-wider">Details</span>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div id="ind-3" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm shadow-sm ring-4 ring-slate-50 transition-colors">3</div>
+                        <span class="text-[10px] font-semibold text-slate-500 mt-2 uppercase tracking-wider">Review</span>
+                    </div>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="p-8 text-center">
+                        <div class="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-200">
+                            <i class="fas fa-check text-2xl"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-900 mb-2">Feedback Submitted</h2>
+                        {% for category, message in messages %}
+                            <p class="text-slate-600 text-sm">{{ message }}</p>
+                        {% endfor %}
+                        <button onclick="window.close()" class="mt-6 px-6 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 rounded text-sm font-semibold transition">Close Window</button>
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% if not get_flashed_messages() %}
+            <form action="/submit_feedback" method="POST" id="feedbackForm" class="p-8">
+                
+                <div id="step-1" class="step-transition block">
+                    <h2 class="text-lg font-bold text-slate-900 mb-1">What kind of feedback do you have?</h2>
+                    <p class="text-sm text-slate-500 mb-6">Select the category that best fits your inquiry.</p>
+                    
+                    <div class="space-y-3">
+                        <label class="flex items-center p-4 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                            <input type="radio" name="topic" value="bug" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" checked>
+                            <div class="ml-3">
+                                <span class="block text-sm font-semibold text-slate-900">Report a Bug / Glitch</span>
+                                <span class="block text-xs text-slate-500">Something in the system isn't working correctly.</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-4 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                            <input type="radio" name="topic" value="feature" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                            <div class="ml-3">
+                                <span class="block text-sm font-semibold text-slate-900">Request a Feature</span>
+                                <span class="block text-xs text-slate-500">Suggest an improvement or new tool for the workflow.</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-4 border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+                            <input type="radio" name="topic" value="other" class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                            <div class="ml-3">
+                                <span class="block text-sm font-semibold text-slate-900">General Inquiry</span>
+                                <span class="block text-xs text-slate-500">Questions about usage or other feedback.</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="step-2" class="step-transition hidden">
+                    <h2 class="text-lg font-bold text-slate-900 mb-1">Provide details</h2>
+                    <p class="text-sm text-slate-500 mb-6">Please be as specific as possible so our developers can help.</p>
+                    
+                    <textarea name="message" id="messageBox" rows="6" class="w-full border border-slate-300 rounded-md p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-slate-800" placeholder="E.g., When I click 'Save Draft' on patient John Doe, the screen freezes for 5 seconds..."></textarea>
+                    <p id="error-msg" class="text-red-500 text-xs mt-2 hidden"><i class="fas fa-exclamation-circle mr-1"></i> Please enter a message before continuing.</p>
+                </div>
+
+                <div id="step-3" class="step-transition hidden">
+                    <h2 class="text-lg font-bold text-slate-900 mb-1">Review & Submit</h2>
+                    <p class="text-sm text-slate-500 mb-6">Ensure your feedback is correct before sending it to IT Support.</p>
+                    
+                    <div class="bg-slate-50 border border-slate-200 rounded-md p-4 mb-2">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Selected Topic</p>
+                        <p id="review-topic" class="text-sm font-semibold text-slate-900 mb-4 capitalize">Bug Report</p>
+                        
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Your Message</p>
+                        <p id="review-message" class="text-sm text-slate-700 italic border-l-2 border-slate-300 pl-3 py-1"></p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between items-center pt-4 border-t border-slate-100">
+                    <button type="button" id="btn-back" onclick="prevStep()" class="px-5 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed transition" disabled>Back</button>
+                    
+                    <button type="button" id="btn-next" onclick="nextStep()" class="px-6 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded text-sm font-semibold shadow-sm transition flex items-center">
+                        Next Step <i class="fas fa-arrow-right ml-2 text-xs"></i>
+                    </button>
+                    
+                    <button type="submit" id="btn-submit" class="hidden px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold shadow-sm transition flex items-center">
+                        Submit Feedback <i class="fas fa-paper-plane ml-2 text-xs"></i>
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </main>
+
+    <script>
+        let currentStep = 1;
+        const totalSteps = 3;
+
+        function updateUI() {
+            // Toggle Visibility
+            for (let i = 1; i <= totalSteps; i++) {
+                document.getElementById(`step-${i}`).classList.add('hidden');
+                document.getElementById(`ind-${i}`).classList.remove('bg-blue-600', 'text-white');
+                document.getElementById(`ind-${i}`).classList.add('bg-slate-200', 'text-slate-500');
+            }
+            
+            document.getElementById(`step-${currentStep}`).classList.remove('hidden');
+            
+            // Update Progress Bar
+            const progressLines = { 1: '0%', 2: '50%', 3: '100%' };
+            document.getElementById('progress-line').style.width = progressLines[currentStep];
+
+            // Update Indicators (Active and Completed)
+            for (let i = 1; i <= currentStep; i++) {
+                document.getElementById(`ind-${i}`).classList.remove('bg-slate-200', 'text-slate-500');
+                document.getElementById(`ind-${i}`).classList.add('bg-blue-600', 'text-white');
+            }
+
+            // Button Logic
+            document.getElementById('btn-back').disabled = (currentStep === 1);
+            
+            if (currentStep === totalSteps) {
+                document.getElementById('btn-next').classList.add('hidden');
+                document.getElementById('btn-submit').classList.remove('hidden');
+                populateReview();
+            } else {
+                document.getElementById('btn-next').classList.remove('hidden');
+                document.getElementById('btn-submit').classList.add('hidden');
+            }
+        }
+
+        function nextStep() {
+            // Validation for Step 2
+            if (currentStep === 2) {
+                const msg = document.getElementById('messageBox').value.trim();
+                if (msg === "") {
+                    document.getElementById('error-msg').classList.remove('hidden');
+                    return;
+                }
+                document.getElementById('error-msg').classList.add('hidden');
+            }
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateUI();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateUI();
+            }
+        }
+
+        function populateReview() {
+            const topic = document.querySelector('input[name="topic"]:checked').value;
+            const msg = document.getElementById('messageBox').value;
+            document.getElementById('review-topic').innerText = topic;
+            document.getElementById('review-message').innerText = msg;
+        }
+    </script>
+</body>
+</html>

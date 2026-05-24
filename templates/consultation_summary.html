@@ -1,0 +1,589 @@
+{% extends 'doctor_base.html' %}
+
+{% block back_button %}
+<button onclick="confirmSummaryExit()" class="mr-4 text-gray-400 hover:text-red-500 transition"><i class="fas fa-arrow-left"></i></button>
+{% endblock %}
+{% block header_title %}Consultation Summary{% endblock %}
+{% block header_subtitle %}Edit generated structured clinical notes{% endblock %}
+
+{% block content %}
+<div id="fullscreen-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full max-w-full -mt-2" style="height: calc(100vh - 120px);">
+    
+    <div class="bg-white border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden rounded-tr-xl rounded-tl-xl lg:rounded-tl-none lg:rounded-tr-none">
+        
+        <div class="p-2 border-b bg-gray-50 flex justify-between items-center z-20 shadow-sm relative shrink-0">
+            <div id="left-header-title" class="font-bold text-gray-700 px-2 flex items-center transition-colors text-sm">
+                <i class="fas fa-file-audio text-blue-600 mr-2" id="header-icon"></i> 
+                <span id="header-text">Raw Transcription</span>
+            </div>
+            
+            <div class="flex bg-gray-200/80 p-1 rounded-md">
+                <button id="btn-transcription" onclick="switchLeftView('transcription')" class="px-4 py-1.5 rounded text-sm font-bold bg-white text-gray-800 shadow-sm transition flex items-center">
+                    <i class="fas fa-microphone-alt text-gray-400 mr-2 text-xs"></i> Transcription
+                </button>
+                <button id="btn-history" onclick="switchLeftView('history')" class="px-4 py-1.5 rounded text-sm font-medium text-gray-500 hover:text-gray-800 transition flex items-center">
+                    <i class="far fa-list-alt text-green-600 mr-2 text-xs"></i> Patient History
+                </button>
+            </div>
+        </div>
+
+        <div class="flex-1 grid grid-cols-1 grid-rows-1 overflow-hidden relative">
+            
+            <div id="view-transcription" class="col-start-1 row-start-1 flex flex-col transition-all duration-300 transform translate-x-0 opacity-100 z-10 h-full bg-white">
+                <div id="rawText" class="w-full flex-1 p-5 overflow-y-auto text-gray-700 font-medium leading-relaxed bg-gray-50/50 whitespace-pre-wrap">{{ patient.transcription | safe }}</div>
+                <input type="hidden" id="hiddenTranscription" name="transcription" form="reportForm" value="{{ patient.transcription }}">
+                
+                <div class="p-3 border-t bg-white z-20 shrink-0">
+                    <button onclick="toggleTranslation()" type="button" id="transBtn" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded text-sm transition"><i class="fas fa-language mr-2"></i>Translate to English</button>
+                </div>
+            </div>
+
+            <div id="view-history" class="col-start-1 row-start-1 flex flex-col transition-all duration-300 transform translate-x-8 opacity-0 pointer-events-none z-0 h-full bg-[#525659]">
+                
+                <div class="bg-[#323639] text-[#f1f1f1] flex justify-between items-center px-3 py-2 text-sm shadow-md z-30 shrink-0 select-none">
+                    
+                    <div class="flex items-center space-x-2 w-1/4">
+                        <button onclick="toggleThumbnails()" class="hover:bg-white/10 p-1.5 rounded transition text-gray-300 hover:text-white mr-1" title="Toggle Sidebar">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div class="w-px h-4 bg-gray-600 mx-1"></div>
+                        <button onclick="navigateHistory(-1)" class="hover:bg-white/10 px-2 py-1 rounded transition text-gray-300 hover:text-white text-xs font-bold" title="Previous Page">
+                            Prev
+                        </button>
+                        <button onclick="navigateHistory(1)" class="hover:bg-white/10 px-2 py-1 rounded transition text-gray-300 hover:text-white text-xs font-bold" title="Next Page">
+                            Next
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-1 sm:space-x-3 w-2/4">
+                        <div class="bg-[#171717] rounded flex items-center px-2 py-0.5">
+                            <input type="number" id="pdf-page-input" value="1" min="1" max="{{ past_reports|length if past_reports else 1 }}" class="w-8 bg-transparent text-center text-white outline-none text-xs font-mono" onchange="jumpHistoryPage(this.value)">
+                            <span class="text-xs text-gray-400 ml-1 font-mono">/ {{ past_reports|length if past_reports else 0 }}</span>
+                        </div>
+                        
+                        <div class="w-px h-4 bg-gray-600 mx-1 hidden sm:block"></div>
+                        
+                        <div class="flex items-center">
+                            <button onclick="changeZoom(-0.1)" class="hover:bg-white/10 p-1.5 rounded text-gray-300 hover:text-white transition"><i class="fas fa-minus text-xs"></i></button>
+                            <span id="zoom-indicator" class="w-12 text-center text-xs font-mono">100%</span>
+                            <button onclick="changeZoom(0.1)" class="hover:bg-white/10 p-1.5 rounded text-gray-300 hover:text-white transition"><i class="fas fa-plus text-xs"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-1 w-1/4">
+                        <button id="btn-download" onclick="downloadReport()" class="hover:bg-white/10 p-1.5 rounded text-gray-300 hover:text-white transition" title="Download Current Page as PDF"><i class="fas fa-download"></i></button>
+                        <button onclick="window.print()" class="hover:bg-white/10 p-1.5 rounded text-gray-300 hover:text-white transition" title="Print"><i class="fas fa-print"></i></button>
+                        <button onclick="saveAndReplaceReport()" class="hover:bg-white/10 p-1.5 rounded text-blue-400 hover:text-blue-300 transition" title="Save & Replace File"><i class="fas fa-save"></i></button>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex overflow-hidden relative">
+                    
+                    <div id="pdf-sidebar" class="w-48 bg-[#323639] border-r border-[#1f2122] overflow-y-auto hidden flex-col items-center py-4 space-y-4 z-20 shrink-0 shadow-xl">
+                        {% if past_reports %}
+                            {% for report in past_reports %}
+                            <div onclick="jumpHistoryPage('{{ loop.index }}')" class="cursor-pointer group flex flex-col items-center">
+                                <div class="w-24 h-32 bg-white rounded-sm shadow-md mb-2 opacity-70 group-hover:opacity-100 transition border-2 border-transparent" id="thumb-{{ loop.index }}">
+                                    <div class="p-2 text-[6px] text-gray-400">Pusat Perubatan...<br>Date: {{ report.date }}</div>
+                                </div>
+                                <span class="text-xs text-gray-400 group-hover:text-white">Page {{ loop.index }}</span>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <div id="history-scroll-area" class="flex-1 overflow-y-auto p-4 sm:p-8 flex flex-col items-center relative">
+                        <div id="zoom-wrapper" class="w-full flex flex-col items-center origin-top transition-transform duration-200">
+                            {% if past_reports and past_reports|length > 0 %}
+                                {% for report in past_reports %}
+                                <div class="history-page hidden w-full max-w-[750px] bg-white shadow-2xl mb-8 relative group" id="history-page-{{ loop.index }}">
+                                    
+                                    <div class="p-8 sm:p-12 relative z-10" id="report-content-{{ loop.index }}">
+                                        <div class="flex justify-between items-start border-b border-gray-300 pb-4 mb-6">
+                                            <div class="flex items-center space-x-4">
+                                                <img src="{{ url_for('static', filename='um_logo.png') }}" alt="UM Logo" class="w-12 h-12 object-contain">
+                                                <div>
+                                                    <h2 class="font-bold text-gray-800 text-[15px] uppercase tracking-wide leading-tight">Pusat Perubatan<br>Universiti Malaya</h2>
+                                                    <h3 class="font-bold text-gray-600 text-sm mt-1">E.M.M.A.S</h3>
+                                                </div>
+                                            </div>
+                                            <div class="text-right text-xs text-gray-600 font-medium space-y-1">
+                                                <p>Date: <span class="font-bold text-gray-800">{{ report.date | default('N/A', true) }}</span></p>
+                                                <p>Physician: <span class="font-bold text-gray-800">{{ report.doctor | default('E.M.M.A.S Records', true) }}</span></p>
+                                            </div>
+                                        </div>
+
+                                        <div class="border rounded border-gray-300 p-4 grid grid-cols-2 gap-4 text-sm font-medium text-gray-800 mb-6">
+                                            <div><span class="font-bold">Patient Name:</span> {{ patient.name }}</div>
+                                            <div><span class="font-bold">IC Number:</span> {{ patient.ic }}</div>
+                                            <div><span class="font-bold">Age:</span> {{ patient.age }}</div>
+                                            <div><span class="font-bold">Room ID:</span> {{ report.room | default('1', true) }}</div>
+                                        </div>
+
+                                        <div class="space-y-6 text-sm text-gray-700">
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">1. Chief Complaint (CC)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.cc | default('No data recorded', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">2. History of Presenting Illness (HOPI)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.hopi | default('No data recorded', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">3. Past Medical History (PMH)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.pmh | default('N/A', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">4. Drug History (DH)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.dh | default('N/A', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">5. Family History (FH)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.fh | default('N/A', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">6. Social History (SH)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.sh | default('N/A', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">7. Allergies</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.allergies | default('None reported', true) }}</p></div>
+                                            <div><h4 class="font-bold text-[15px] text-gray-900 mb-2 border-b border-gray-100 pb-1">8. Review of Systems (ROS)</h4>
+                                                <p class="leading-relaxed mt-2 whitespace-pre-wrap">{{ report.ros | default('N/A', true) }}</p></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="flex flex-col items-center justify-center text-gray-300 h-full w-full mt-20">
+                                    <i class="fas fa-file-pdf text-6xl mb-4 opacity-50"></i>
+                                    <p class="font-medium text-lg">No PDF reports available.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden rounded-tr-xl rounded-tl-xl lg:rounded-tl-none lg:rounded-tr-none">
+        <div class="p-3 border-b bg-blue-600 text-white font-bold flex justify-between items-center z-10 shrink-0 shadow-sm">
+            <span><i class="fas fa-file-medical-alt mr-2"></i> Clinical Notes Draft</span>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto bg-gray-50/20">
+            <form id="reportForm" action="/doctor/generate_report/{{ patient.id }}" method="POST" class="p-6 space-y-6">
+<div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">1. Chief Complaint (CC)</label>
+                    <textarea name="cc" rows="2" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">{{ patient.cc | default('No data recorded', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">2. History of Presenting Illness (HOPI)</label>
+                    <textarea name="hopi" rows="5" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">{{ patient.hopi | default('No data recorded', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">3. Past Medical History (PMH)</label>
+                    <textarea name="pmh" rows="2" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 shadow-sm">{{ patient.pmh | default('N/A', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">4. Drug History (DH)</label>
+                    <textarea name="dh" rows="2" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 shadow-sm">{{ patient.dh | default('N/A', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">5. Family History (FH)</label>
+                    <textarea name="fh" rows="2" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 shadow-sm">{{ patient.fh | default('N/A', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">6. Social History (SH)</label>
+                    <textarea name="sh" rows="2" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 shadow-sm">{{ patient.sh | default('N/A', true) }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">7. Allergies</label>
+                    <input type="text" name="allergies" value="{{ patient.allergies | default('None reported', true) }}" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">8. Review of Systems (ROS)</label>
+                    <textarea name="ros" rows="3" class="w-full border border-gray-300 rounded p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-gray-600 shadow-sm">{{ patient.ros | default('N/A', true) }}</textarea>
+                </div>
+
+                <div class="bg-white p-4 rounded border border-gray-200 shadow-sm mb-8">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">9. Vital Signs (Auto retrieved)</label>
+                    <div class="grid grid-cols-4 gap-2 text-center text-sm">
+                        <div class="bg-gray-50 border border-gray-200 p-2 rounded"><p class="text-[10px] text-gray-500 font-bold uppercase">Temp</p><p class="font-bold">{{ patient.temp | default('37.0°C', true) }}</p></div>
+                        <div class="bg-gray-50 border border-gray-200 p-2 rounded"><p class="text-[10px] text-gray-500 font-bold uppercase">HR</p><p class="font-bold">{{ patient.hr | default('80', true) }}</p></div>
+                        <div class="bg-gray-50 border border-gray-200 p-2 rounded"><p class="text-[10px] text-gray-500 font-bold uppercase">RR</p><p class="font-bold">{{ patient.rr | default('18', true) }}</p></div>
+                        <div class="bg-gray-50 border border-gray-200 p-2 rounded"><p class="text-[10px] text-gray-500 font-bold uppercase">BP</p><p class="font-bold">{{ patient.bp | default('120/80', true) }}</p></div>
+                    </div>
+                </div>
+
+                <div class="sticky bottom-0 bg-white pt-4 pb-2 border-t mt-8 flex justify-between space-x-3 z-20">
+                    <button type="button" onclick="document.getElementById('reportForm').action='/doctor/save_draft/{{ patient.id }}'; document.getElementById('reportForm').submit();" class="w-1/3 py-3 border border-blue-600 text-blue-600 rounded text-sm font-bold hover:bg-blue-50 transition shadow-sm whitespace-nowrap">
+                        <i class="fas fa-save mr-1"></i> Save Draft
+                    </button>
+                    
+                    <button type="button" onclick="document.getElementById('referModal').classList.remove('hidden')" class="w-1/3 py-3 bg-purple-600 text-white rounded text-sm font-bold hover:bg-purple-700 transition shadow-sm whitespace-nowrap">
+                        <i class="fas fa-exchange-alt mr-1"></i> Refer Patient
+                    </button>
+                    
+                    <button type="button" onclick="confirmGenerate()" class="w-1/3 bg-green-600 hover:bg-green-700 text-white py-3 rounded text-sm font-bold transition shadow-sm whitespace-nowrap">
+                        <i class="fas fa-file-signature mr-1"></i> Save & Generate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="summaryExitModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-exclamation-triangle text-2xl text-red-600"></i></div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">Discard Notes?</h3>
+        <p class="text-sm text-gray-500 mb-6">Are you sure you want to go back? All unsaved edits to these notes will be lost.</p>
+        <div class="flex space-x-3">
+            <button type="button" onclick="document.getElementById('summaryExitModal').classList.add('hidden')" class="w-1/2 py-2.5 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+            <a href="/doctor/dashboard" class="w-1/2 py-2.5 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 block text-center transition">Yes, go back</a>
+        </div>
+    </div>
+</div>
+
+<div id="referModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
+        
+        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+            <h3 class="text-lg font-bold text-gray-800"><i class="fas fa-exchange-alt text-purple-600 mr-2"></i> Refer Patient</h3>
+            <button type="button" onclick="document.getElementById('referModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <p class="text-xs text-gray-500 mb-5">Select a doctor and schedule an appointment time. This will automatically finalize the current notes and forward the patient to their queue.</p>
+        
+        <div class="space-y-4 text-left">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Select Doctor</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-user-md text-gray-400 text-xs"></i>
+                    </div>
+                    <select id="modalDoctorSelect" class="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm font-medium text-gray-700">
+                        <option value="" disabled selected>Search Name or Email...</option>
+                        {% for doc in all_doctors %}
+                            <option value="{{ doc.id }}">{{ doc.name }} ({{ doc.email }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Appointment Date & Time</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-calendar-alt text-gray-400 text-xs"></i>
+                    </div>
+                    <input type="datetime-local" id="modalDateTime" class="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm font-medium text-gray-700">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex space-x-3">
+            <button type="button" onclick="document.getElementById('referModal').classList.add('hidden')" class="w-1/2 py-2.5 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+            <button type="button" onclick="submitReferral()" class="w-1/2 py-2.5 bg-purple-600 text-white rounded text-sm font-semibold hover:bg-purple-700 transition">Confirm Referral</button>
+        </div>
+    </div>
+</div>
+
+<div id="genModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-file-medical text-2xl text-blue-600"></i></div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">Generate Final Report?</h3>
+        <p class="text-sm text-gray-500 mb-6">This will finalize the structured notes and generate the official consultation document.</p>
+        <div class="flex space-x-3">
+            <button type="button" onclick="document.getElementById('genModal').classList.add('hidden')" class="w-1/2 py-2.5 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Cancel</button>
+            <button type="button" onclick="document.getElementById('reportForm').action='/doctor/generate_report/{{ patient.id }}'; document.getElementById('reportForm').submit()" class="w-1/2 py-2.5 bg-blue-600 text-white rounded text-sm font-semibold hover:bg-blue-700 block text-center transition">Yes, Generate</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+    // 🚀 NEW EDGE-TO-EDGE OVERRIDE
+    document.addEventListener("DOMContentLoaded", function() {
+        const grid = document.getElementById('fullscreen-grid');
+        if (grid && grid.parentElement) {
+            grid.parentElement.style.paddingLeft = '0.5rem'; 
+            grid.parentElement.style.paddingRight = '0.5rem';
+            grid.parentElement.style.paddingBottom = '0';
+            grid.parentElement.style.maxWidth = '100%';
+        }
+    });
+
+    // --- Layout & View Toggle Logic ---
+    function switchLeftView(view) {
+        const vTrans = document.getElementById('view-transcription');
+        const vHist = document.getElementById('view-history');
+        const bTrans = document.getElementById('btn-transcription');
+        const bHist = document.getElementById('btn-history');
+        const icon = document.getElementById('header-icon');
+        const text = document.getElementById('header-text');
+
+        const activeBtnClass = "px-4 py-1.5 rounded text-sm font-bold bg-white text-gray-800 shadow-sm transition flex items-center";
+        const inactiveBtnClass = "px-4 py-1.5 rounded text-sm font-medium text-gray-500 hover:text-gray-800 transition flex items-center";
+
+        if (view === 'history') {
+            bHist.className = activeBtnClass;
+            bTrans.className = inactiveBtnClass;
+            icon.className = "fas fa-folder-open text-green-600 mr-2";
+            text.innerText = "Patient History Reports";
+            
+            vTrans.classList.replace('translate-x-0', '-translate-x-8');
+            vTrans.classList.replace('opacity-100', 'opacity-0');
+            vTrans.classList.replace('z-10', 'z-0');
+            vTrans.classList.add('pointer-events-none');
+            
+            vHist.classList.replace('translate-x-8', 'translate-x-0');
+            vHist.classList.replace('opacity-0', 'opacity-100');
+            vHist.classList.replace('z-0', 'z-10');
+            vHist.classList.remove('pointer-events-none');
+        } else {
+            bTrans.className = activeBtnClass;
+            bHist.className = inactiveBtnClass;
+            icon.className = "fas fa-file-audio text-blue-600 mr-2";
+            text.innerText = "Raw Transcription";
+            
+            vHist.classList.replace('translate-x-0', 'translate-x-8');
+            vHist.classList.replace('opacity-100', 'opacity-0');
+            vHist.classList.replace('z-10', 'z-0');
+            vHist.classList.add('pointer-events-none');
+            
+            vTrans.classList.replace('-translate-x-8', 'translate-x-0');
+            vTrans.classList.replace('opacity-0', 'opacity-100');
+            vTrans.classList.replace('z-0', 'z-10');
+            vTrans.classList.remove('pointer-events-none');
+        }
+    }
+
+    // --- PDF Viewer Toolbar Logic ---
+    const totalPages = {{ past_reports|length if past_reports else 0 }};
+    let currentZoom = 1.0;
+
+    function toggleThumbnails() {
+        const sidebar = document.getElementById('pdf-sidebar');
+        if (sidebar.classList.contains('hidden')) {
+            sidebar.classList.remove('hidden');
+            sidebar.classList.add('flex');
+        } else {
+            sidebar.classList.add('hidden');
+            sidebar.classList.remove('flex');
+        }
+    }
+
+    function navigateHistory(step) {
+        if (totalPages === 0) return;
+        let current = parseInt(document.getElementById('pdf-page-input').value) || 1;
+        jumpHistoryPage(current + step);
+    }
+
+    function jumpHistoryPage(pageVal) {
+        if (totalPages === 0) return;
+        let pageNum = parseInt(pageVal);
+        if (pageNum < 1) pageNum = 1;
+        if (pageNum > totalPages) pageNum = totalPages;
+        
+        document.getElementById('pdf-page-input').value = pageNum;
+        
+        document.querySelectorAll('.history-page').forEach(el => el.classList.add('hidden'));
+        document.getElementById('history-page-' + pageNum).classList.remove('hidden');
+        
+        document.querySelectorAll('[id^="thumb-"]').forEach(th => th.classList.remove('border-blue-500'));
+        const activeThumb = document.getElementById('thumb-' + pageNum);
+        if(activeThumb) activeThumb.classList.add('border-blue-500');
+        
+        document.getElementById('history-scroll-area').scrollTop = 0;
+    }
+    
+    if (totalPages > 0) jumpHistoryPage(1);
+
+    function changeZoom(delta) {
+        currentZoom += delta;
+        if (currentZoom < 0.5) currentZoom = 0.5;
+        if (currentZoom > 2.5) currentZoom = 2.5;
+        
+        document.getElementById('zoom-indicator').innerText = Math.round(currentZoom * 100) + '%';
+        document.getElementById('zoom-wrapper').style.transform = `scale(${currentZoom})`;
+        
+        if (currentZoom > 1) {
+            document.getElementById('zoom-wrapper').style.marginBottom = `${(currentZoom - 1) * 100}%`;
+        } else {
+            document.getElementById('zoom-wrapper').style.marginBottom = '0px';
+        }
+    }
+
+    function downloadReport() {
+        const pageNum = document.getElementById('pdf-page-input').value;
+        const element = document.getElementById('report-content-' + pageNum);
+        
+        if (!element) {
+            alert("No report available to download.");
+            return;
+        }
+
+        const btn = document.getElementById('btn-download');
+        const originalIcon = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const opt = {
+            margin:       0.5,
+            filename:     'EMMAS_Patient_History_Page_' + pageNum + '.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            btn.innerHTML = originalIcon; 
+        }).catch(err => {
+            console.error("Download Error:", err);
+            btn.innerHTML = originalIcon;
+        });
+    }
+
+    function saveAndReplaceReport() {
+        const btn = document.querySelector('button[onclick="saveAndReplaceReport()"]');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-check text-green-400"></i>';
+            setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+        }, 1000);
+    }
+
+    function confirmSummaryExit() { document.getElementById('summaryExitModal').classList.remove('hidden'); }
+    function confirmGenerate() { document.getElementById('genModal').classList.remove('hidden'); }
+    
+    async function submitReferral() {
+        const docSelect = document.getElementById('modalDoctorSelect');
+        const docId = docSelect.value;
+        const apptTime = document.getElementById('modalDateTime').value;
+
+        if (!docId) { alert("Please select a doctor to refer to."); return; }
+        if (!apptTime) { alert("Please select an appointment date and time."); return; }
+
+        // Grab the name of the doctor (e.g., "Dr. Smith") from the dropdown
+        const docName = docSelect.options[docSelect.selectedIndex].text;
+        const mainForm = document.getElementById('reportForm');
+        
+        // Show a loading cursor so the doctor knows it's working
+        document.body.style.cursor = 'wait';
+        
+        let formData = new FormData(mainForm);
+        formData.append('target_doctor', docId);
+        // Safety lock: truncate time string to exactly 16 chars (YYYY-MM-DDTHH:MM) so Python doesn't crash on seconds
+        formData.append('appointment_time', apptTime.substring(0, 16));
+
+        try {
+            // Send the data quietly in the background
+            const response = await fetch("/doctor/refer/{{ patient.id }}", {
+                method: "POST",
+                body: formData
+            });
+            
+            document.body.style.cursor = 'default';
+            
+            if(response.ok) {
+                // 1. Show the small pop-out message!
+                alert("The patient has been successfully referred to " + docName + ".");
+                
+                // 2. Safely redirect back to the dashboard
+                window.location.href = "/doctor/dashboard";
+            } else {
+                alert("Server Error: The referral could not be processed. Please check your terminal.");
+            }
+        } catch (error) {
+            document.body.style.cursor = 'default';
+            console.error("Referral Error:", error);
+            alert("Network error. Could not connect to the server.");
+        }
+    }
+
+    // --- TRANSLATION LOGIC ---
+    let isTranslated = false;
+    let cachedOriginal = "";
+    let cachedTranslation = "";
+
+    function formatDialogue(text) {
+        if (!text) return "";
+        let formatted = text.replace(/<strong[^>]*>/g, '').replace(/<\/strong>/g, '');
+        formatted = formatted.replace(/\*\*/g, '');
+        formatted = formatted.replace(/^\s+/gm, ''); 
+        formatted = formatted.replace(/Doctor:/g, '<strong class="text-black font-extrabold">Doctor:</strong>');
+        formatted = formatted.replace(/Patient:/g, '<strong class="text-black font-extrabold">Patient:</strong>');
+        return formatted;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const tb = document.getElementById('rawText');
+        const hiddenInput = document.getElementById('hiddenTranscription');
+        if (tb) {
+            tb.innerHTML = formatDialogue(tb.innerHTML);
+            hiddenInput.value = tb.innerHTML; 
+        }
+    });
+
+    async function toggleTranslation() {
+        const tb = document.getElementById('rawText');
+        const hiddenInput = document.getElementById('hiddenTranscription');
+        const btn = document.getElementById('transBtn');
+        
+        if (!cachedOriginal) { cachedOriginal = tb.innerHTML; }
+        
+        if (isTranslated) {
+            tb.innerHTML = cachedOriginal;
+            hiddenInput.value = cachedOriginal; 
+            btn.innerHTML = '<i class="fas fa-language mr-2"></i>Translate to English';
+            btn.className = "bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded text-sm transition";
+            isTranslated = false;
+        } else {
+            if (cachedTranslation) {
+                tb.innerHTML = cachedTranslation;
+                hiddenInput.value = cachedTranslation;
+                btn.innerHTML = '<i class="fas fa-undo mr-2"></i>Original Text';
+                btn.className = "bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded text-sm transition";
+                isTranslated = true;
+            } else {
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Translating...';
+                btn.className = "bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-2 px-4 rounded text-sm transition";
+                btn.disabled = true;
+                btn.classList.add("cursor-wait");
+                
+                try {
+                    const response = await fetch('/api/translate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: hiddenInput.value })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        cachedTranslation = formatDialogue(data.translation);
+                        tb.innerHTML = cachedTranslation;
+                        hiddenInput.value = cachedTranslation;
+                        btn.innerHTML = '<i class="fas fa-undo mr-2"></i>Original Text';
+                        btn.className = "bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded text-sm transition";
+                        isTranslated = true;
+                    } else {
+                        alert("Error: " + data.error);
+                        btn.innerHTML = '<i class="fas fa-language mr-2"></i>Translate to English';
+                        btn.className = "bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded text-sm transition";
+                    }
+                } catch (error) {
+                    console.error("Translation error:", error);
+                    alert("Could not connect to the translation server.");
+                    btn.innerHTML = '<i class="fas fa-language mr-2"></i>Translate to English';
+                    btn.className = "bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 px-4 rounded text-sm transition";
+                } finally {
+                    btn.disabled = false;
+                    btn.classList.remove("cursor-wait");
+                }
+            }
+        }
+    }
+</script>
+{% endblock %}

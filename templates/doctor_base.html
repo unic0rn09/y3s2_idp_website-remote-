@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E.M.M.A.S</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        /* Smooth transition just for mobile sliding now */
+        #sidebar { transition: transform 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 flex h-screen overflow-hidden text-sm md:text-base antialiased text-slate-800 selection:bg-blue-200 selection:text-blue-900">
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-20 hidden md:hidden backdrop-blur-sm" onclick="toggleSidebar()"></div>
+
+    <aside id="sidebar" class="bg-slate-900 flex flex-col justify-between absolute md:relative z-30 h-full w-64 transform -translate-x-full md:translate-x-0 overflow-hidden shadow-xl md:shadow-none whitespace-nowrap flex-shrink-0 text-slate-300">
+        <div class="w-64">
+            <div class="p-5 border-b border-slate-800 flex items-center space-x-3">
+                <div class="bg-blue-600 text-white px-2 py-1 rounded text-sm font-bold tracking-wide mt-1">IDP</div>
+                <div>
+                    <div class="font-semibold text-lg text-white leading-tight tracking-tight">E.M.M.A.S<br><span class="text-xs text-slate-400 font-normal">Medical Scribe</span></div>
+                </div>
+                <button onclick="toggleSidebar()" class="md:hidden ml-auto text-slate-400 hover:text-white p-2">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <nav class="space-y-1 p-3">
+                <a href="/doctor/dashboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium {% if request.path == '/doctor/dashboard' %}bg-blue-600 text-white shadow-sm{% else %}hover:bg-slate-800 hover:text-white{% endif %} transition">
+                    <i class="fas fa-th-large w-5 text-center"></i><span>Dashboard</span>
+                </a>
+                <a href="/doctor/mock_consultation" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium {% if request.path == '/doctor/mock_consultation' %}bg-blue-600 text-white shadow-sm{% else %}hover:bg-slate-800 hover:text-white{% endif %} transition">
+                    <i class="fas fa-flask w-5 text-center"></i><span>Scribe Test</span>
+                </a>
+                <a href="/doctor/history" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm font-medium {% if request.path == '/doctor/history' %}bg-blue-600 text-white shadow-sm{% else %}hover:bg-slate-800 hover:text-white{% endif %} transition">
+                    <i class="fas fa-folder-open w-5 text-center"></i><span>Patient Archives</span>
+                </a>
+            </nav>
+        </div>
+        
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50 w-64">
+            <a href="/help_feedback" target="_blank" data-bypass="true" class="flex items-center space-x-3 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-md text-sm font-medium transition w-full text-left mb-3">
+                <i class="fas fa-info-circle w-5 text-center"></i><span>IT Support</span>
+            </a>
+            
+            <form action="/doctor/toggle_status" method="POST" class="mb-3 bg-slate-800 p-2.5 rounded-md flex items-center justify-between border border-slate-700">
+                <span class="text-xs font-semibold text-slate-300 tracking-wide uppercase">Zone</span>
+                <button type="submit" data-bypass="true" class="flex items-center space-x-1.5 {% if doctor.status == 'online' %}text-green-400{% else %}text-red-400{% endif %} px-2.5 py-1 text-[10px] uppercase font-bold transition">
+                    <div class="w-1.5 h-1.5 rounded-full {% if doctor.status == 'online' %}bg-green-500{% else %}bg-red-500{% endif %}"></div>
+                    <span>{% if doctor.status == 'online' %}Green{% else %}Off Duty{% endif %}</span>
+                </button>
+            </form>
+            
+            <a href="/logout" data-bypass="true" class="flex items-center space-x-3 px-3 py-2 text-red-400 hover:text-white hover:bg-red-900/50 rounded-md text-sm font-medium transition">
+                <i class="fas fa-sign-out-alt w-5 text-center"></i><span>Secure Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-y-auto relative w-full bg-slate-50">
+        <header class="bg-white border-b border-slate-200 p-4 md:px-6 md:py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm transition-all">
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleSidebar()" class="md:hidden text-slate-500 hover:text-blue-700 focus:outline-none transition-colors p-1" title="Toggle Menu">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 flex items-center tracking-tight">
+                        {% block back_button %}{% endblock %}
+                        {% block header_title %}Dashboard{% endblock %}
+                    </h1>
+                    <p class="text-slate-500 text-xs mt-0.5 font-medium">{% block header_subtitle %} {{ doctor.name }} | Enhanced Malaysian Medical AI Scribe{% endblock %}</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <div class="text-right hidden sm:block">
+                    <p class="font-bold text-sm text-slate-900 leading-tight">Consultation Room {{ doctor.room }}</p>
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">{{ doctor.name }}</p>
+                </div>
+                <div class="bg-slate-100 text-slate-600 border border-slate-200 w-9 h-9 rounded flex items-center justify-center font-bold">
+                    <i class="fas fa-user-md text-sm"></i>
+                </div>
+            </div>
+        </header>
+        
+        <div class="p-3 md:p-4 w-full flex-1">{% block content %}{% endblock %}</div>
+    </main>
+
+    <div id="globalNavModal" class="fixed inset-0 bg-slate-900 bg-opacity-75 backdrop-blur-sm hidden flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-lg shadow-xl border border-slate-200 w-full max-w-sm p-6 text-center transform transition-all">
+            <div class="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-amber-200">
+                <i class="fas fa-exclamation-triangle text-xl text-amber-500"></i>
+            </div>
+            <h3 class="font-bold text-lg text-slate-900 mb-2">Unsaved Clinical Notes</h3>
+            <p class="text-sm text-slate-500 mb-6">You have an active consultation session. Navigating away will result in lost data. Proceed?</p>
+            <div class="flex space-x-3">
+                <button onclick="cancelGlobalNav()" class="w-1/2 py-2 border border-slate-300 rounded text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Return</button>
+                <button onclick="confirmGlobalNav()" class="w-1/2 py-2 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 transition">Discard Notes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        window.isUnsaved = false; 
+        window.addEventListener('beforeunload', function (e) {
+            if (window.isUnsaved) { e.preventDefault(); e.returnValue = ''; }
+        });
+
+        let pendingNavigationUrl = '';
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('aside a, header a'); 
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (window.isUnsaved && this.href && !this.href.includes('javascript') && !this.hasAttribute('data-bypass')) {
+                        e.preventDefault(); 
+                        pendingNavigationUrl = this.href; 
+                        document.getElementById('globalNavModal').classList.remove('hidden'); 
+                    }
+                });
+            });
+        });
+        function cancelGlobalNav() { document.getElementById('globalNavModal').classList.add('hidden'); pendingNavigationUrl = ''; }
+        function confirmGlobalNav() { window.isUnsaved = false; window.location.href = pendingNavigationUrl; }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

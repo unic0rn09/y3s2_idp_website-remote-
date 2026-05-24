@@ -1,0 +1,91 @@
+{% extends 'doctor_base.html' %}
+{% block header_title %}Consultation History{% endblock %}
+{% block header_subtitle %}View previously completed reports{% endblock %}
+
+{% block content %}
+<div class="bg-white border rounded-xl shadow-sm overflow-hidden relative">
+    
+    <div class="p-4 border-b bg-gray-50 flex flex-col md:flex-row justify-between items-center space-y-3 md:space-y-0">
+        <h3 class="font-bold text-gray-700"><i class="fas fa-search mr-2"></i> Search History</h3>
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                <i class="fas fa-calendar-alt absolute left-3 top-2.5 text-gray-400"></i>
+                <input type="date" id="dateSearch" class="pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600">
+            </div>
+            <div class="relative">
+                <i class="fas fa-id-card absolute left-3 top-2.5 text-gray-400"></i>
+                <input type="text" id="icSearch" placeholder="Search by IC Number..." class="pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-600 w-64">
+            </div>
+            <button onclick="clearSearch()" class="text-sm font-bold text-gray-500 hover:text-red-500 transition ml-2">Clear</button>
+        </div>
+    </div>
+
+    <table class="w-full text-left text-sm">
+        <thead class="text-xs text-gray-500 uppercase bg-white border-b">
+            <tr>
+                <th class="py-4 px-6 font-semibold">Date Completed</th>
+                <th class="py-4 px-6 font-semibold">Patient Name</th>
+                <th class="py-4 px-6 font-semibold">IC Number</th>
+                <th class="py-4 px-6 font-semibold">Symptoms</th>
+                <th class="py-4 px-6 font-semibold text-right">Report</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100" id="historyTable">
+            {% for p in history %}
+            <tr class="hover:bg-gray-50 transition history-row">
+                <td class="py-4 px-6 text-gray-600 row-date">{{ p.date_added.strftime('%Y-%m-%d') }} <span class="text-xs text-gray-400 ml-1">{{ p.date_added.strftime('%H:%M') }}</span></td>
+                <td class="py-4 px-6 font-bold text-gray-800">{{ p.name }}</td>
+                <td class="py-4 px-6 text-gray-500 row-ic">{{ p.ic }}</td>
+                <td class="py-4 px-6 text-gray-600 truncate max-w-xs">{{ p.symptoms }}</td>
+                <td class="py-4 px-6 text-right">
+                    <a href="/doctor/report/{{ p.id }}?source=history" class="bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 px-4 py-2 rounded-lg text-sm font-bold transition border border-blue-100">View</a>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr id="noResults" class="hidden"><td colspan="5" class="text-center py-8 text-gray-500 font-bold">No matches found for your search.</td></tr>
+            {% if not history %}
+            <tr id="emptyTable"><td colspan="5" class="text-center py-8 text-gray-500">No completed consultations found in the database.</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const dateSearch = document.getElementById('dateSearch');
+    const icSearch = document.getElementById('icSearch');
+    
+    function filterTable() {
+        const dVal = dateSearch.value;
+        const iVal = icSearch.value.toLowerCase();
+        let rowsVisible = 0;
+
+        document.querySelectorAll('.history-row').forEach(row => {
+            const rowDate = row.querySelector('.row-date').innerText.split(' ')[0]; // Gets just YYYY-MM-DD
+            const rowIC = row.querySelector('.row-ic').innerText.toLowerCase();
+            
+            let matchDate = dVal === '' || rowDate === dVal;
+            let matchIC = iVal === '' || rowIC.includes(iVal);
+
+            if (matchDate && matchIC) {
+                row.style.display = 'table-row';
+                rowsVisible++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        document.getElementById('noResults').style.display = (rowsVisible === 0 && document.querySelectorAll('.history-row').length > 0) ? 'table-row' : 'none';
+    }
+
+    function clearSearch() {
+        dateSearch.value = '';
+        icSearch.value = '';
+        filterTable();
+    }
+
+    dateSearch.addEventListener('input', filterTable);
+    icSearch.addEventListener('keyup', filterTable);
+</script>
+{% endblock %}

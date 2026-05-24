@@ -1,0 +1,153 @@
+{% extends 'doctor_base.html' %}
+
+{% block content %}
+<div class="mb-10">
+    <div class="flex justify-between items-end mb-4 border-b border-slate-200 pb-2">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
+            <i class="fas fa-users text-blue-700 mr-2"></i> Active Patient Queue ({{ queue|length }})
+        </h2>
+    </div>
+    
+    {% if not queue %}
+    <div class="bg-white rounded-md border border-slate-200 p-10 text-center shadow-sm">
+        <div class="w-14 h-14 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100">
+            <i class="fas fa-check-double text-2xl"></i>
+        </div>
+        <h3 class="font-bold text-slate-700 text-base">Queue is Empty</h3>
+        <p class="text-slate-500 text-sm mt-1">You are all caught up. Waiting for triage assignments.</p>
+    </div>
+    {% endif %}
+
+    <div class="space-y-3">
+        {% for p in queue %}
+        <div class="bg-white border {% if p.priority %}border-red-300 shadow-md ring-1 ring-red-50{% else %}border-slate-200 shadow-sm hover:border-blue-300{% endif %} rounded-md p-4 relative flex flex-col lg:flex-row transition-colors duration-200 group">
+            
+            {% if p.priority %}
+                <div class="absolute top-0 right-0 bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl uppercase tracking-wider shadow-sm z-10">Urgent</div>
+            {% endif %}
+            
+            <div class="lg:w-[62%] flex flex-col justify-center pr-5 border-b lg:border-b-0 lg:border-r border-slate-100 mb-4 lg:mb-0 pb-4 lg:pb-0">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 leading-tight group-hover:text-blue-800 transition-colors">{{ p.name }}</h3>
+                        <p class="text-[11px] font-semibold text-slate-500 mt-1 uppercase tracking-wider flex items-center">
+                            <i class="far fa-id-card mr-1.5 opacity-75"></i> {{ p.ic }} <span class="mx-2 text-slate-300">|</span> {{ p.age }} YRS
+                        </p>
+                    </div>
+                </div>
+                <div class="mt-3 bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <p class="text-sm text-slate-700 leading-snug line-clamp-2" title="{{ p.symptoms }}">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2 block mb-0.5">Chief Complaint</span>
+                        {{ p.symptoms }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="lg:w-[38%] flex flex-col justify-between pl-0 lg:pl-5">
+                <div class="grid grid-cols-4 gap-2 mb-3">
+                    <div class="text-center bg-slate-50 border border-slate-100 rounded flex flex-col justify-center py-1.5">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Temp</p>
+                        <p class="text-sm font-bold text-slate-800 font-mono">{{ p.temp }}</p>
+                    </div>
+                    <div class="text-center bg-slate-50 border border-slate-100 rounded flex flex-col justify-center py-1.5">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">HR</p>
+                        <p class="text-sm font-bold text-slate-800 font-mono">{{ p.hr }}</p>
+                    </div>
+                    <div class="text-center bg-slate-50 border border-slate-100 rounded flex flex-col justify-center py-1.5">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">RR</p>
+                        <p class="text-sm font-bold text-slate-800 font-mono">{{ p.rr }}</p>
+                    </div>
+                    <div class="text-center bg-slate-50 border border-slate-100 rounded flex flex-col justify-center py-1.5">
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">BP</p>
+                        <p class="text-sm font-bold text-slate-800 font-mono">{{ p.bp }}</p>
+                    </div>
+                </div>
+                
+                {% if p.status == 'Draft' %}
+                <div class="flex space-x-2 h-9">
+                    <div class="bg-amber-50 text-amber-700 border border-amber-200 font-bold rounded text-xs w-1/3 flex items-center justify-center shadow-sm">
+                        <i class="fas fa-file-signature mr-1.5"></i> Draft
+                    </div>
+                    <a href="/doctor/summary/{{ p.id }}" class="bg-white border border-blue-700 text-blue-700 hover:bg-blue-50 font-bold rounded text-sm flex-1 flex items-center justify-center transition shadow-sm">
+                        Resume Clinical Note
+                    </a>
+                </div>
+                {% else %}
+                <a href="{{ url_for('live_consultation', patient_id=p.id) }}" class="bg-blue-700 hover:bg-blue-800 text-white font-bold h-9 rounded shadow-sm transition w-full text-sm flex items-center justify-center">
+                    <i class="fas fa-stethoscope mr-2 opacity-80"></i> Begin Consultation
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-10">
+    <div class="flex justify-between items-end mb-3 border-b border-slate-200 pb-2">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
+            <i class="fas fa-check-circle text-emerald-600 mr-2"></i> Completed Consultation Today ({{ completed_today|length }})
+        </h2>
+        <a href="/doctor/history" class="text-xs font-bold text-blue-700 hover:text-blue-900 transition uppercase tracking-wider flex items-center">
+            View Consultation History <i class="fas fa-chevron-right ml-1 text-[9px]"></i>
+        </a>
+    </div>
+    
+    <div class="bg-white border border-slate-200 rounded-md shadow-sm overflow-hidden">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider font-bold border-b border-slate-200">
+                <tr>
+                    <th class="py-3 px-5 w-24">Time</th>
+                    <th class="py-3 px-5 w-1/4">Patient Name</th>
+                    <th class="py-3 px-5">Primary Complaint</th>
+                    <th class="py-3 px-5 text-right w-32">Clinical Note</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+                {% for p in completed_today %}
+                <tr class="hover:bg-slate-50/80 transition {% if loop.index > 3 %}hidden extra-row{% endif %}">
+                    <td class="py-3 px-5 text-slate-500 font-mono text-xs">{{ p.date_added.strftime('%H:%M') }}</td>
+                    <td class="py-3 px-5 font-bold text-slate-900">{{ p.name }}</td>
+                    <td class="py-3 px-5 truncate max-w-[250px] text-xs">{{ p.symptoms }}</td>
+                    <td class="py-3 px-5 text-right">
+                        <a href="/doctor/report/{{ p.id }}?source=dashboard" class="text-blue-700 font-bold text-xs hover:underline flex items-center justify-end">
+                            <i class="far fa-file-alt mr-1.5"></i> Review
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not completed_today %}
+                <tr><td colspan="4" class="py-8 text-center text-slate-400 font-medium text-sm">No encounters completed today.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        
+        {% if completed_today|length > 3 %}
+        <div class="p-2.5 bg-slate-50 border-t border-slate-200 text-center">
+            <button onclick="toggleRows()" id="viewMoreBtn" class="text-slate-500 font-bold text-xs hover:text-blue-700 transition uppercase tracking-wider">
+                Show More ({{ completed_today|length - 3 }})
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let rowsExpanded = false;
+    function toggleRows() {
+        const rows = document.querySelectorAll('.extra-row');
+        const btn = document.getElementById('viewMoreBtn');
+        rowsExpanded = !rowsExpanded;
+        
+        rows.forEach(r => {
+            if (rowsExpanded) r.classList.remove('hidden');
+            else r.classList.add('hidden');
+        });
+        
+        if (rowsExpanded) btn.innerText = "HIDE LIST";
+        else btn.innerText = `SHOW MORE (${ {{ completed_today|length }} - 3 })`;
+    }
+</script>
+{% endblock %}

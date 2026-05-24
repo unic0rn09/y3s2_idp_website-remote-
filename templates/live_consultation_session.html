@@ -1,0 +1,449 @@
+{% extends 'doctor_base.html' %} 
+
+{% block header_title %}Live Consultation{% endblock %}
+{% block header_subtitle %}Session with {{ patient.name }}{% endblock %}
+
+{% block content %} 
+<div class="space-y-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-4 flex justify-between items-center shadow-sm">
+        <div>
+            <h3 class="font-bold text-gray-900">{{ patient.name }}</h3>
+            <p class="text-xs text-gray-500">IC: {{ patient.ic }} | Age: {{ patient.age }}</p>
+        </div>
+        <div class="text-right">
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Chief Complaint</span>
+            <p class="text-sm font-medium text-gray-700">{{ patient.symptoms }}</p>
+        </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+        <div class="p-12 flex flex-col items-center justify-center border-b border-gray-100 flex-1 relative bg-white" id="audioSection">
+            
+            <div id="initialState" class="text-center transition-all duration-300 transform">
+                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-microphone text-3xl text-blue-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Ready to Start Session</h3>
+                <p class="text-gray-500 text-sm mb-8">Click the button below to enable your microphone and begin</p>
+                <button onclick="startSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-lg font-bold shadow-md transition transform hover:scale-105 active:scale-95 flex items-center mx-auto">
+                    <i class="far fa-play-circle text-lg mr-2"></i> Begin Live Recording
+                </button>
+            </div>
+
+            <div id="requestingState" class="hidden text-center transition-all duration-300 transform">
+                <div class="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                    <i class="fas fa-unlock-alt text-3xl text-yellow-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Microphone Access Required</h3>
+                <p class="text-gray-500 text-sm mb-4">Please click <strong class="text-gray-800">"Allow"</strong> in your browser's popup to start recording.</p>
+            </div>
+
+            <div id="errorState" class="hidden text-center transition-all duration-300 transform">
+                <div class="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-microphone-slash text-3xl text-red-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Microphone Blocked</h3>
+                <p class="text-gray-500 text-sm mb-8">We cannot record without microphone access. Please update your browser site settings and try again.</p>
+                <button onclick="resetToInitial()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2.5 rounded-lg font-bold shadow-sm transition">
+                    <i class="fas fa-redo mr-2"></i> Try Again
+                </button>
+            </div>
+
+            <div id="activeState" class="hidden w-full flex flex-col items-center justify-center space-y-8">
+                <div class="w-full bg-blue-50/50 rounded-xl h-24 flex items-center justify-center overflow-hidden">
+                    <div id="waveContainer" class="flex items-end justify-center space-x-1.5 w-full px-4 h-16">
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <button id="btnPause" onclick="togglePause()" class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-bold shadow-md transition flex items-center w-40 justify-center">
+                        <i class="fas fa-pause mr-2" id="pauseIcon"></i> <span id="pauseText">Pause</span>
+                    </button>
+                    <button onclick="confirmFinish()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition flex items-center">
+                        <i class="fas fa-stop-circle mr-2"></i> Finish & Review
+                    </button>
+                </div>
+            </div>
+
+            <div id="recordingIndicator" class="absolute top-4 right-4 bg-red-50 text-red-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center hidden shadow-sm border border-red-100">
+                <div class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse" id="redDot"></div>
+                <span id="recordingStatusText">Recording</span>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 flex flex-col flex-1 min-h-[250px]">
+            <div class="px-6 py-4 flex justify-between items-center bg-white border-b border-gray-100 shadow-sm">
+                <h4 class="font-bold text-gray-800 text-sm">Real-time AI Scribe</h4>
+                <div class="flex items-center space-x-4">
+                    <div class="flex bg-gray-100 p-1 rounded-lg">
+                        <button type="button" id="modeNormalBtn" onclick="setTranscriptionMode('normal')" class="px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition">Normal</button>
+                        <button type="button" id="modeKelantanBtn" onclick="setTranscriptionMode('kelantan')" class="px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition">Kelantan</button>
+                    </div>
+                    <button id="editToggleBtn" onclick="toggleEdit()" class="text-blue-600 hover:text-blue-800 text-sm font-medium transition flex items-center hidden">
+                        <i class="fas fa-pen mr-1.5 text-xs"></i> Edit
+                    </button>
+                </div>
+            </div>
+            <textarea id="transcriptionBox" readonly class="w-full h-full flex-1 p-6 bg-gray-50 outline-none resize-none text-gray-700 leading-relaxed font-medium" placeholder="Transcription will appear here..."></textarea>
+        </div>
+    </div>
+</div>
+
+<div id="finishModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform transition-all scale-95 opacity-0 duration-300" id="finishModalContent">
+        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100"><i class="far fa-check-circle text-3xl text-blue-600"></i></div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">End Consultation?</h3>
+        <p class="text-sm text-gray-500 mb-6">This will stop the recording and process the transcription for review.</p>
+        
+        <form action="/doctor/finish_live/{{ patient.id }}" method="POST" id="finishLiveForm" class="flex space-x-3">
+            <input type="hidden" name="transcription" id="hiddenTranscription">
+            
+            <button type="submit" id="finalSubmitBtn" class="w-1/2 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 block text-center transition">Confirm</button>
+            <button type="button" onclick="closeModal('finishModal')" class="w-1/2 py-2.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.isUnsaved = true;
+
+    // System Variables
+    let isPaused = false;
+    let isEditing = false;
+    let isFinishing = false;
+    let pendingUploads = 0;
+    let chunkCounter = 0;
+    let currentTranscriptionMode = "normal";
+
+    function setTranscriptionMode(mode) {
+        currentTranscriptionMode = mode;
+        const btnNormal = document.getElementById('modeNormalBtn');
+        const btnKelantan = document.getElementById('modeKelantanBtn');
+        
+        if (mode === 'normal') {
+            btnNormal.className = "px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition";
+            btnKelantan.className = "px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition";
+        } else {
+            btnKelantan.className = "px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition";
+            btnNormal.className = "px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition";
+        }
+    }
+    
+    // Audio Context Variables
+    let mediaRecorder;
+    let audioContext;
+    let analyser;
+    let dataArray;
+    let animationId;
+
+
+    function confirmFinish() { 
+        // Automatically pause the recording if it is currently active
+        if (!isPaused && mediaRecorder && mediaRecorder.state === "recording") {
+            togglePause(); 
+        }
+        
+        // Open the confirmation modal
+        openModal('finishModal'); 
+    }
+
+    
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById(id + 'Content').classList.remove('scale-95', 'opacity-0');
+            document.getElementById(id + 'Content').classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id + 'Content').classList.remove('scale-100', 'opacity-100');
+        document.getElementById(id + 'Content').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { document.getElementById(id).classList.add('hidden'); }, 300);
+    }
+
+    function resetToInitial() {
+        document.getElementById('errorState').classList.add('hidden');
+        document.getElementById('initialState').classList.remove('hidden');
+    }
+
+    // --- Real Microphone Integration ---
+    async function startSession() {
+        document.getElementById('initialState').classList.add('hidden');
+        document.getElementById('errorState').classList.add('hidden');
+        document.getElementById('requestingState').classList.remove('hidden');
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            document.getElementById('requestingState').classList.add('hidden');
+
+            // Set up Web Audio API for Real-time Visualizer
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 64; 
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            // 🚀 THE FIX: Set up MediaRecorder to send chunks to the Backend
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            mediaRecorder.start(); 
+
+            // Force a fresh, valid file with headers every 10 seconds
+            const recorderInterval = setInterval(() => {
+                if (mediaRecorder.state === "recording" && !isFinishing && !isPaused) {
+                    mediaRecorder.stop(); 
+                    mediaRecorder.start();
+                } else if (isFinishing) {
+                    clearInterval(recorderInterval);
+                }
+            }, 10000);
+
+            // Send chunk to Jetson backend
+            mediaRecorder.ondataavailable = async e => {
+                if (e.data.size > 2000) {
+
+                    // 🛡️ Energy gate: skip silent/near-silent chunks
+                    // Must decode BEFORE incrementing pendingUploads so a silent
+                    // chunk never corrupts the counter.
+                    let isSilent = false;
+                    try {
+                        const arrayBuffer = await e.data.arrayBuffer();
+                        const decoded = await audioContext.decodeAudioData(arrayBuffer);
+                        const channelData = decoded.getChannelData(0);
+                        const rms = Math.sqrt(
+                            channelData.reduce((sum, v) => sum + v * v, 0) / channelData.length
+                        );
+                        if (rms < 0.01) {
+                            isSilent = true;
+                            console.log("🔇 Silent chunk skipped, RMS:", rms);
+                        }
+                    } catch (decodeErr) {
+                        // If decode fails, let it through so we don't drop real audio
+                        console.warn("⚠️ Energy gate decode error, passing chunk through:", decodeErr);
+                    }
+
+                    if (isSilent) return; // Exit early — pendingUploads is untouched
+
+                    // Only increment AFTER we know the chunk has real speech
+                    pendingUploads++;
+                    const formData = new FormData();
+                    formData.append('audio', new Blob([e.data], { type: 'audio/webm' }));
+                    formData.append('patient_id', "{{ patient.id }}");
+                    formData.append('chunk_index', chunkCounter++);
+                    formData.append('mode', currentTranscriptionMode);
+
+                    try {
+                        const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
+                        const result = await response.json();
+                        if (result.text) {
+                            const tBox = document.getElementById('transcriptionBox');
+                            tBox.value += (tBox.value ? " " : "") + result.text;
+                            tBox.scrollTop = tBox.scrollHeight;
+                        }
+                    } finally {
+                        pendingUploads--;
+                        if (isFinishing && pendingUploads <= 0) {
+                            submitFinalForm();
+                        }
+                    }
+                }
+            };
+
+            // Swap UI to 'Active Recording' state
+            document.getElementById('activeState').classList.remove('hidden');
+            document.getElementById('activeState').classList.add('flex');
+            document.getElementById('recordingIndicator').classList.remove('hidden');
+            document.getElementById('editToggleBtn').classList.remove('hidden');
+
+            const tBox = document.getElementById('transcriptionBox');
+            tBox.value = "";
+            
+            setRecordingUIStatus(true);
+            drawRealWaves(); 
+
+        } catch (err) {
+            console.error("Mic access error:", err);
+            document.getElementById('requestingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+    }
+
+    // --- Submission Logic ---
+    document.getElementById('finishLiveForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        isFinishing = true;
+        
+        // UI Feedback
+        const btn = document.getElementById('finalSubmitBtn');
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Finalizing...';
+        btn.disabled = true;
+
+        document.getElementById('hiddenTranscription').value = document.getElementById('transcriptionBox').value;
+
+        // Force submit if stuck
+        setTimeout(() => { submitFinalForm(); }, 3000);
+
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+        }
+    });
+
+    function submitFinalForm() {
+        window.isUnsaved = false;
+        
+        // Disable button and show spinner
+        const btn = document.getElementById('finalSubmitBtn');
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Finalizing...';
+        btn.disabled = true;
+
+        // Force stop the recorder immediately
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+        }
+
+        console.log("Triggering Final Diarization...");
+        
+        // Call the new JSON endpoint
+        fetch('/api/process_final_diarization', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ patient_id: "{{ patient.id }}", mode: currentTranscriptionMode })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                // If the Jetson finishes successfully, redirect to the summary page!
+                window.location.href = '/doctor/summary/{{ patient.id }}';
+            } else {
+                alert("Diarization error: " + data.error);
+                btn.innerHTML = 'Confirm';
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error("Final processing failed:", error);
+            alert("An error occurred while processing the audio on the Jetson.");
+            btn.innerHTML = 'Confirm';
+            btn.disabled = false;
+        });
+    }
+
+    // --- Real-Time Waveform Drawer ---
+    function drawRealWaves() {
+        if(isPaused) return; 
+        
+        animationId = requestAnimationFrame(drawRealWaves);
+        analyser.getByteFrequencyData(dataArray);
+
+        const container = document.getElementById('waveContainer');
+        
+        if (container.children.length === 0) {
+             for(let i=0; i<25; i++) {
+                 let bar = document.createElement('div');
+                 bar.className = 'w-2 rounded-full transition-all duration-75 ease-out';
+                 container.appendChild(bar);
+             }
+        }
+        
+        const bars = container.children;
+        for(let i=0; i<25; i++) {
+            let val = dataArray[i] || 0;
+            let height = Math.max(4, (val / 255) * 60);
+            bars[i].style.height = height + 'px';
+            
+            if(height > 40) bars[i].className = 'w-2 bg-blue-400 rounded-full transition-all duration-75';
+            else bars[i].className = 'w-2 bg-blue-600 rounded-full transition-all duration-75';
+        }
+    }
+
+    // --- Pause/Resume Controls ---
+    function togglePause() {
+        const btn = document.getElementById('btnPause');
+        const icon = document.getElementById('pauseIcon');
+        const text = document.getElementById('pauseText');
+
+        isPaused = !isPaused;
+
+        if (isPaused) {
+            if(mediaRecorder.state === "recording") mediaRecorder.pause();
+            btn.classList.replace('bg-orange-500', 'bg-green-600');
+            btn.classList.replace('hover:bg-orange-600', 'hover:bg-green-700');
+            icon.classList.replace('fa-pause', 'fa-play');
+            text.innerText = "Resume";
+            
+            setRecordingUIStatus(false);
+            cancelAnimationFrame(animationId);
+            flattenWaves(); 
+
+        } else {
+            if(mediaRecorder.state === "paused") mediaRecorder.resume();
+            btn.classList.replace('bg-green-600', 'bg-orange-500');
+            btn.classList.replace('hover:bg-green-700', 'hover:bg-orange-600');
+            icon.classList.replace('fa-play', 'fa-pause');
+            text.innerText = "Pause";
+            
+            setRecordingUIStatus(true);
+            drawRealWaves(); 
+        }
+    }
+
+    function flattenWaves() {
+        const container = document.getElementById('waveContainer');
+        const bars = container.querySelectorAll('div');
+        bars.forEach(bar => { bar.style.height = '4px'; });
+    }
+
+    function setRecordingUIStatus(isRecording) {
+        const indicatorDot = document.getElementById('redDot');
+        const indicatorText = document.getElementById('recordingStatusText');
+        const indicatorBox = document.getElementById('recordingIndicator');
+
+        if (isRecording) {
+            indicatorDot.classList.add('animate-pulse', 'bg-red-500');
+            indicatorDot.classList.remove('bg-gray-400');
+            indicatorText.innerText = "Recording";
+            indicatorText.classList.replace('text-gray-600', 'text-red-600');
+            indicatorBox.classList.replace('bg-gray-100', 'bg-red-50');
+            indicatorBox.classList.replace('border-gray-200', 'border-red-100');
+        } else {
+            indicatorDot.classList.remove('animate-pulse', 'bg-red-500');
+            indicatorDot.classList.add('bg-gray-400');
+            indicatorText.innerText = "Paused";
+            indicatorText.classList.replace('text-red-600', 'text-gray-600');
+            indicatorBox.classList.replace('bg-red-50', 'bg-gray-100');
+            indicatorBox.classList.replace('border-red-100', 'border-gray-200');
+        }
+    }
+
+    // --- Transcription Edit Logic ---
+    function toggleEdit() {
+        const tBox = document.getElementById('transcriptionBox');
+        const btn = document.getElementById('editToggleBtn');
+        isEditing = !isEditing;
+
+        if (isEditing) {
+            tBox.removeAttribute('readonly');
+            tBox.classList.replace('bg-gray-50', 'bg-white');
+            tBox.classList.add('ring-2', 'ring-inset', 'ring-blue-500');
+            tBox.focus();
+            
+            btn.innerHTML = '<i class="fas fa-save mr-1.5 text-xs"></i> Save';
+            btn.classList.replace('text-blue-600', 'text-green-600');
+            btn.classList.replace('hover:text-blue-800', 'hover:text-green-800');
+        } else {
+            tBox.setAttribute('readonly', 'true');
+            tBox.classList.replace('bg-white', 'bg-gray-50');
+            tBox.classList.remove('ring-2', 'ring-inset', 'ring-blue-500');
+            
+            btn.innerHTML = '<i class="fas fa-pen mr-1.5 text-xs"></i> Edit';
+            btn.classList.replace('text-green-600', 'text-blue-600');
+            btn.classList.replace('hover:text-green-800', 'hover:text-blue-800');
+        }
+    }
+</script>
+{% endblock %}

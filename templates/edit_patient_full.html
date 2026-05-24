@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block header_title %}Edit Patient Profile{% endblock %}
+{% block header_subtitle %}Update personal and contact information for {{ patient.name | default('Patient') }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto pb-10">
+    
+    <a href="/nurse/history" class="inline-flex items-center text-sm font-bold text-slate-500 hover:text-blue-600 mb-6 transition-colors group">
+        <i class="fas fa-arrow-left mr-2 transform group-hover:-translate-x-1 transition-transform"></i> 
+        Back to Patient Records
+    </a>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="bg-slate-50 border-b border-slate-200 p-6">
+            <h2 class="text-xl font-bold text-slate-800">Patient Personal Information</h2>
+            <p class="text-sm text-slate-500 mt-1">Please ensure all contact and emergency details are accurate and up to date.</p>
+        </div>
+
+        <form action="/edit_patient_full/{{ patient.id|default('0') }}" method="POST" class="p-6 md:p-8 space-y-8">
+            
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Basic Details</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Patient Name *</label>
+                        <input type="text" name="name" value="{{ patient.name }}" required class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Identity Card (IC) *</label>
+                        <input type="text" name="ic" id="editIcInput" value="{{ patient.ic }}" required class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Age</label>
+                        <input type="text" name="age" id="editAgeOutput" value="{{ patient.age }}" readonly class="w-full bg-slate-50 border border-slate-300 rounded-md p-2.5 outline-none text-slate-500 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Contact & Address</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                        <input type="text" name="phone" value="{{ patient.phone|default('') }}" placeholder="e.g. 012-3456789" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Email Address</label>
+                        <input type="email" name="email" value="{{ patient.email|default('') }}" placeholder="patient@example.com" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">House Address</label>
+                    <textarea name="address" rows="3" placeholder="Full residential address..." class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm resize-none">{{ patient.address|default('') }}</textarea>
+                </div>
+            </div>
+
+            <div class="bg-red-50/50 -mx-6 md:-mx-8 px-6 md:px-8 py-6 border-y border-red-100">
+                <h3 class="text-xs font-bold text-red-500 uppercase tracking-widest mb-4 border-b border-red-100 pb-2">Emergency Contact Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Contact Name</label>
+                        <input type="text" name="emergency_name" value="{{ patient.emergency_name|default('') }}" placeholder="Next of kin name" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Contact Number</label>
+                        <input type="text" name="emergency_phone" value="{{ patient.emergency_phone|default('') }}" placeholder="Emergency phone" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Relationship</label>
+                        <input type="text" name="emergency_relation" value="{{ patient.emergency_relation|default('') }}" placeholder="e.g. Spouse, Parent" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-4 pt-4">
+                <a href="/nurse/history" class="px-6 py-2.5 border border-slate-300 rounded-md text-sm font-semibold text-slate-700 hover:bg-slate-50 transition focus:outline-none focus:ring-2 focus:ring-slate-200">Cancel</a>
+                <button type="submit" class="px-8 py-2.5 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Save Changes</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Recalculates age if the nurse fixes a typo in the IC number
+    document.getElementById('editIcInput').addEventListener('input', function(e) {
+        let ic = e.target.value.replace(/[^0-9]/g, '');
+        if(ic.length >= 6) {
+            let year = parseInt(ic.substring(0,2));
+            // Assuming standard logic where if year > current year's last 2 digits, it's 19XX, else 20XX
+            let currentYearTwoDigits = parseInt(new Date().getFullYear().toString().slice(-2));
+            let fullYear = year > currentYearTwoDigits ? 1900 + year : 2000 + year;
+            document.getElementById('editAgeOutput').value = new Date().getFullYear() - fullYear + " years old";
+        }
+    });
+</script>
+{% endblock %}

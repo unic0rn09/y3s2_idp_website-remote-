@@ -1,0 +1,297 @@
+{% extends 'base.html' %} {% block header_title %}Analytical Statistics{% endblock %}
+{% block header_subtitle %}Detailed patient flow breakdown by triage zone{% endblock %}
+
+{% block content %}
+
+<div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+    <div class="flex items-center text-gray-700">
+        <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mr-3">
+            <i class="fas fa-calendar-day text-lg"></i>
+        </div>
+        <div>
+            <h2 class="font-bold text-base">Date Filter</h2>
+            <p class="text-xs text-gray-500">Viewing records for <strong class="text-gray-700">{{ stats.selected_date }}</strong></p>
+        </div>
+    </div>
+    <div class="relative">
+        <input type="date" id="dateSearch" value="{{ stats.selected_date }}" onchange="filterByDate(this.value)" 
+               class="pl-4 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer bg-gray-50 hover:bg-white transition shadow-inner">
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
+        <div class="w-12 h-12 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xl mr-4"><i class="fas fa-users"></i></div>
+        <div>
+            <h3 class="text-2xl font-extrabold text-gray-800">{{ stats.green_waiting + stats.green_completed + 58 }}</h3>
+            <p class="text-xs text-gray-500 font-medium">Total Patients Today</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
+        <div class="w-12 h-12 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center text-xl mr-4"><i class="far fa-clock"></i></div>
+        <div>
+            <h3 class="text-2xl font-extrabold text-gray-800">{{ stats.total_waiting }}</h3>
+            <p class="text-xs text-gray-500 font-medium">Currently Waiting</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center">
+        <div class="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center text-xl mr-4"><i class="far fa-check-circle"></i></div>
+        <div>
+            <h3 class="text-2xl font-extrabold text-gray-800">{{ stats.green_completed + 38 }}</h3>
+            <p class="text-xs text-gray-500 font-medium">Consultations Completed</p>
+        </div>
+    </div>
+</div>
+
+<div class="mb-8">
+    <div class="flex items-center text-gray-800 mb-4 px-1">
+        <i class="far fa-clock text-gray-400 mr-2"></i>
+        <h2 class="font-bold text-sm uppercase tracking-wider">Zone Breakdown</h2>
+        <span class="text-gray-400 ml-2 text-xs hidden sm:inline">— detailed patient status per triage zone</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-red-500 mr-2"></div><span class="font-bold text-red-600">Red Zone</span></div>
+            <p class="text-[10px] text-gray-400 font-bold uppercase mb-6">Critical / High Priority</p>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Patients Waiting</span><span class="font-bold text-red-600">8</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-red-500 h-1.5 rounded-full" style="width: 35%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Completed</span><span class="font-bold text-gray-800">15</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-gray-400 h-1.5 rounded-full" style="width: 65%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-2"></div><span class="font-bold text-yellow-600">Yellow Zone</span></div>
+            <p class="text-[10px] text-gray-400 font-bold uppercase mb-6">Moderate Priority</p>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Patients Waiting</span><span class="font-bold text-yellow-600">12</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-yellow-400 h-1.5 rounded-full" style="width: 34%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Completed</span><span class="font-bold text-gray-800">23</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-gray-400 h-1.5 rounded-full" style="width: 66%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative bg-white rounded-xl shadow-sm border-2 border-green-400 p-5">
+            <div class="absolute -top-3 right-6 bg-green-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full flex items-center shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-white mr-1.5"></span>YOUR ZONE
+            </div>
+            <div class="flex items-center mb-1"><div class="w-2.5 h-2.5 rounded-full bg-green-500 mr-2"></div><span class="font-bold text-green-600">Green Zone</span></div>
+            <p class="text-[10px] text-gray-400 font-bold uppercase mb-6">Low Priority</p>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Patients Waiting</span><span class="font-bold text-green-600">{{ stats.green_waiting }}</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-green-500 h-1.5 rounded-full" style="width: {{ stats.green_pct }}%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-sm mb-1"><span class="text-gray-600">Completed</span><span class="font-bold text-gray-800">{{ stats.green_completed }}</span></div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="bg-gray-400 h-1.5 rounded-full" style="width: {{ 100 - stats.green_pct if (stats.green_waiting + stats.green_completed) > 0 else 0 }}%"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-[380px] flex flex-col">
+        <h3 class="text-gray-700 font-bold mb-6 flex items-center text-sm uppercase tracking-wider"><i class="far fa-circle text-gray-400 mr-2"></i> Distribution by Zone</h3>
+        <div class="flex-1 relative w-full flex items-center justify-center overflow-hidden">
+            <div class="w-full h-full max-h-[220px]">
+                <canvas id="donutChart"></canvas>
+            </div>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
+                <span class="text-3xl font-extrabold text-gray-800">{{ stats.green_waiting + stats.green_completed + 58 }}</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Total Patients</span>
+            </div>
+        </div>
+        <div class="flex justify-around mt-6 pt-4 border-t border-gray-100">
+            <div class="text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Red</p><p class="font-bold text-red-600">23</p></div>
+            <div class="text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Yellow</p><p class="font-bold text-yellow-600">35</p></div>
+            <div class="text-center"><p class="text-[10px] text-gray-400 font-bold uppercase">Green</p><p class="font-bold text-green-600">{{ stats.green_waiting + stats.green_completed }}</p></div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-[380px] flex flex-col">
+        <h3 class="text-gray-700 font-bold mb-6 flex items-center text-sm uppercase tracking-wider"><i class="fas fa-chart-bar text-gray-400 mr-2"></i> Waiting vs Completed</h3>
+        <div class="flex-1 relative w-full">
+            <canvas id="barChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 h-[420px] flex flex-col">
+    <div class="flex justify-between items-center mb-6 border-b border-gray-50 pb-3">
+        <h3 class="text-gray-700 font-bold flex items-center text-sm uppercase tracking-wider"><i class="fas fa-chart-area text-gray-400 mr-2"></i> Hourly Patient Intake</h3>
+        
+        <div class="flex bg-gray-100 p-1 rounded-lg space-x-1">
+            <button onclick="filterLineChart('all')" class="chart-btn active bg-white text-gray-800 shadow-sm px-3 py-1 rounded text-[11px] font-bold transition">All</button>
+            <button onclick="filterLineChart('red')" class="chart-btn text-gray-500 hover:bg-white px-3 py-1 rounded text-[11px] font-bold transition">Red</button>
+            <button onclick="filterLineChart('yellow')" class="chart-btn text-gray-500 hover:bg-white px-3 py-1 rounded text-[11px] font-bold transition">Yellow</button>
+            <button onclick="filterLineChart('green')" class="chart-btn text-gray-500 hover:bg-white px-3 py-1 rounded text-[11px] font-bold transition">Green</button>
+        </div>
+    </div>
+    <div class="flex-1 w-full relative">
+        <canvas id="lineChart"></canvas>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-12">
+    <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+        <h3 class="font-bold text-gray-700 flex items-center"><i class="fas fa-user-clock text-gray-400 mr-2"></i> Recent Activity ({{ stats.selected_date }})</h3>
+    </div>
+    <div class="max-h-[500px] overflow-y-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gray-400 uppercase bg-slate-50 border-b border-gray-100 font-semibold sticky top-0 z-10">
+                <tr>
+                    <th class="py-4 px-6">Identification No.</th>
+                    <th class="py-4 px-6">Patient Name</th>
+                    <th class="py-4 px-6">Zone</th>
+                    <th class="py-4 px-6">Status</th>
+                    <th class="py-4 px-6 text-right">Registered At</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                {% for p in green_patients %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="py-4 px-6 text-gray-500 font-mono text-xs">{{ p.ic }}</td>
+                    
+                    <td class="py-4 px-6">
+                        <div class="flex items-center">
+                            <span class="text-gray-900 font-bold mr-2">{{ p.name }}</span>
+                            {% if p.priority %}
+                                <span class="bg-red-100 text-red-600 text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter border border-red-200">Priority</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="bg-green-50 text-green-600 border border-green-100 px-2.5 py-1 rounded-full text-xs font-bold flex items-center w-max">
+                            <div class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></div>Green
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        {% if p.status == 'Completed' %}
+                            <span class="text-green-500 flex items-center"><i class="fas fa-check-circle mr-1.5 text-[10px]"></i>Completed</span>
+                        {% elif p.status == 'Waiting' %}
+                            <span class="text-amber-500 flex items-center"><i class="far fa-clock mr-1.5 text-[10px]"></i>Waiting</span>
+                        {% else %}
+                            <span class="text-indigo-600 flex items-center"><i class="fas fa- stethoscope mr-1.5 text-[10px]"></i>Consulting</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6 text-right text-gray-400 font-mono text-xs">
+                        {{ p.date_added.strftime('%I:%M %p') }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="py-16 text-center text-gray-400">
+                        <i class="fas fa-folder-open text-4xl mb-3 block opacity-20"></i>
+                        <p class="font-bold">No patients registered on {{ stats.selected_date }}</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// --- Date Search Logic ---
+function filterByDate(dateVal) {
+    if(dateVal) window.location.href = `/nurse/statistics?date=${dateVal}`;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // Colors
+    const colors = { red: '#ef4444', yellow: '#f59e0b', green: '#22c55e', grid: '#f1f5f9' };
+    const greenTotal = {{ stats.green_waiting + stats.green_completed }};
+
+    // --- Donut Chart ---
+    new Chart(document.getElementById('donutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Red', 'Yellow', 'Green'],
+            datasets: [{
+                data: [23, 35, greenTotal],
+                backgroundColor: [colors.red, colors.yellow, colors.green],
+                borderWidth: 4, borderColor: '#ffffff', hoverOffset: 5
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { legend: { display: false } } }
+    });
+
+    // --- Grouped Bar Chart ---
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Red Zone', 'Yellow Zone', 'Green Zone'],
+            datasets: [
+                { label: 'Waiting', data: [8, 12, {{ stats.green_waiting }}], backgroundColor: colors.grid, borderRadius: 4 },
+                { label: 'Completed', data: [15, 23, {{ stats.green_completed }}], backgroundColor: colors.green, borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: colors.grid } } }
+        }
+    });
+
+    // --- Hourly Line Chart ---
+    window.myLineChart = new Chart(document.getElementById('lineChart'), {
+        type: 'line',
+        data: {
+            labels: ['07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+            datasets: [
+                { label: 'Red', data: [2, 5, 8, 6, 9, 4, 6, 11, 7, 8], borderColor: colors.red, tension: 0.4, pointRadius: 0 },
+                { label: 'Yellow', data: [3, 7, 10, 12, 7, 7, 8, 14, 11, 13], borderColor: colors.yellow, tension: 0.4, pointRadius: 0 },
+                { label: 'Green', data: {{ stats.green_hourly | tojson }}, borderColor: colors.green, tension: 0.4, pointRadius: 0, borderWidth: 3 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: colors.grid } }, x: { grid: { display: false } } }
+        }
+    });
+
+    // --- Line Chart Filter Logic ---
+    window.filterLineChart = function(zone) {
+        const chart = window.myLineChart;
+        // Update Buttons UI
+        document.querySelectorAll('.chart-btn').forEach(btn => {
+            btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm', 'active');
+            btn.classList.add('text-gray-500');
+        });
+        event.target.classList.add('bg-white', 'text-gray-800', 'shadow-sm', 'active');
+        event.target.classList.remove('text-gray-500');
+
+        // Toggle Data
+        if (zone === 'all') {
+            chart.data.datasets.forEach(ds => ds.hidden = false);
+        } else {
+            chart.data.datasets[0].hidden = (zone !== 'red');
+            chart.data.datasets[1].hidden = (zone !== 'yellow');
+            chart.data.datasets[2].hidden = (zone !== 'green');
+        }
+        chart.update();
+    }
+});
+</script>
+{% endblock %}

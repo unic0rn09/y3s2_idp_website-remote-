@@ -1,0 +1,9 @@
+/venv
+/instance
+*.db
+/static
+__pycache__/
+*.py[cod]
+/gpu_venv
+*.whl
+.env

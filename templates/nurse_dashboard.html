@@ -1,0 +1,486 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="mb-4 flex justify-between items-end">
+    <div class="flex items-center text-gray-800">
+        <i class="fas fa-chart-bar text-gray-400 mr-3"></i>
+        <h2 class="font-bold text-lg">Zone Patient Overview</h2>
+        <span class="text-gray-400 ml-3 text-sm">— patients currently waiting</span>
+    </div>
+    <div class="text-sm">
+        <span class="text-gray-500 mr-4">Total waiting: <span class="font-bold text-gray-800">{{ stats.green_waiting }}</span></span>
+        <a href="/nurse/statistics" class="text-blue-600 font-semibold hover:text-blue-800">View full analytics <i class="fas fa-arrow-right ml-1"></i></a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex justify-between items-center mb-5">
+            <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-red-500 mr-2.5"></div>
+                <span class="font-bold text-red-600">Red Zone</span>
+            </div>
+            <span class="text-[11px] text-gray-400">Critical / High Priority</span>
+        </div>
+        <div class="flex items-end mb-6">
+            <span class="text-5xl font-extrabold text-red-600 leading-none mr-4">{{ stats.red_waiting }}</span>
+            <div class="text-xs text-gray-500 flex items-center pb-1">
+                <i class="far fa-check-circle mr-1.5"></i> {{ stats.red_completed }} completed today
+            </div>
+        </div>
+        <div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                <div class="bg-red-500 h-1.5 rounded-full" style="width: {{ stats.red_pct }}%"></div>
+            </div>
+            <span class="text-[11px] text-gray-400">{{ stats.red_pct }}% of today's cases still pending</span>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex justify-between items-center mb-5">
+            <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-yellow-400 mr-2.5"></div>
+                <span class="font-bold text-yellow-600">Yellow Zone</span>
+            </div>
+            <span class="text-[11px] text-gray-400">Moderate Priority</span>
+        </div>
+        <div class="flex items-end mb-6">
+            <span class="text-5xl font-extrabold text-yellow-500 leading-none mr-4">{{ stats.yellow_waiting }}</span>
+            <div class="text-xs text-gray-500 flex items-center pb-1">
+                <i class="far fa-check-circle mr-1.5"></i> {{ stats.yellow_completed }} completed today
+            </div>
+        </div>
+        <div>
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+                <div class="bg-yellow-400 h-1.5 rounded-full" style="width: {{ stats.yellow_pct }}%"></div>
+            </div>
+            <span class="text-[11px] text-gray-400">{{ stats.yellow_pct }}% of today's cases still pending</span>
+        </div>
+    </div>
+
+    <div class="relative bg-gradient-to-br from-green-50 to-white rounded-xl shadow-sm border-2 border-green-400 p-5">
+        <div class="absolute -top-3 left-6 bg-green-500 text-white text-[11px] font-bold px-3 py-1 rounded-full flex items-center shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-white animate-pulse mr-2"></span>YOUR ZONE
+        </div>
+        
+        <div class="flex justify-between items-center mb-5 mt-1">
+            <div class="flex items-center">
+                <div class="w-3 h-3 rounded-full bg-green-500 mr-2.5"></div>
+                <span class="font-bold text-green-600">Green Zone</span>
+            </div>
+            <span class="text-[10px] border border-gray-100 bg-white px-2.5 py-0.5 rounded text-gray-400 shadow-sm">Low Priority</span>
+        </div>
+        <div class="flex items-end mb-6">
+            <span class="text-5xl font-extrabold text-green-500 leading-none mr-4">{{ stats.green_waiting }}</span>
+            <div class="text-xs text-gray-500 flex items-center pb-1">
+                <i class="far fa-check-circle mr-1.5"></i> {{ stats.green_completed }} completed today
+            </div>
+        </div>
+        <div>
+            <div class="w-full bg-white border border-green-100 rounded-full h-2.5 mb-2 flex items-center px-[2px]">
+                <div class="bg-green-500 h-1.5 rounded-full" style="width: {{ stats.green_pct }}%"></div>
+            </div>
+            <span class="text-[11px] text-gray-400">{{ stats.green_pct }}% of today's cases still pending</span>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+    <div class="p-4 border-b border-blue-100 flex justify-between items-center bg-blue-50">
+        <h2 class="font-bold text-gray-800 text-lg px-2">Available Consultation Rooms</h2>
+        
+        <div class="flex bg-blue-200/40 p-1 rounded-lg">
+            <button id="btn-active" onclick="filterRooms('active')" class="px-4 py-1.5 rounded-md text-sm font-medium text-blue-600 hover:bg-white hover:shadow-sm hover:text-blue-700 transition">
+                <i class="fas fa-door-open mr-1.5"></i>Active
+            </button>
+            <button id="btn-all" onclick="filterRooms('all')" class="px-4 py-1.5 rounded-md text-sm font-bold bg-white text-blue-700 shadow-sm transition">
+                <i class="fas fa-list mr-1.5"></i>All
+            </button>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="text-sm text-gray-500 bg-white border-b">
+                <tr>
+                    <th class="py-4 px-6 font-medium">Room</th>
+                    <th class="py-4 px-6 font-medium">Doctor</th>
+                    <th class="py-4 px-6 font-medium">Patients</th>
+                    <th class="py-4 px-6 font-medium">Status</th>
+                    <th class="py-4 px-6 font-medium text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 text-gray-700">
+                {% for room in rooms %}
+                <tr class="room-row hover:bg-gray-50 transition" data-active="{{ 'true' if room.active else 'false' }}">
+                    <td class="py-4 px-6 font-semibold">{{ room.id }}</td>
+                    <td class="py-4 px-6">{{ room.doctor }}</td>
+                    <td class="py-4 px-6">
+                        <span class="flex items-center space-x-2 text-blue-600 bg-blue-50 px-2 py-1 rounded-md w-max">
+                            <i class="fas fa-user text-xs"></i><span>{{ room.patients|length }}</span>
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        {% if room.status == 'Consulting' or room.status == 'Ongoing Consultation' %}
+                            <span class="text-blue-600 flex items-center"><i class="fas fa-user-md text-xs mr-2"></i>Ongoing Consultation</span>
+                        {% elif room.active %}
+                            <span class="text-green-600 flex items-center"><i class="fas fa-check-circle text-xs mr-2"></i>Available</span>
+                        {% else %}
+                            <span class="text-gray-400 flex items-center"><i class="fas fa-minus-circle text-xs mr-2"></i>Not Available</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 px-6 text-right">
+                        {% if room.active %}
+                        <button onclick="openModal('{{ room.room_num }}')" class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center justify-end space-x-1 w-full">
+                            <i class="far fa-eye"></i><span>View</span>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400 text-sm">Offline</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-5 border-b border-blue-100 bg-blue-50">
+        <h2 class="font-bold text-gray-800 text-lg">Register New Patient</h2>
+    </div>
+    
+    <div class="p-6">
+        <form id="dashRegForm" action="/register_patient" method="POST" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Patient Name *</label>
+                    <input type="text" name="name" id="dashNameInput" placeholder="Enter full name" required class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Identity Card (IC) *</label>
+                    <input type="text" name="ic" id="dashIcInput" placeholder="YYMMDD-PB-###G" required class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Age</label>
+                    <input type="text" name="age" id="dashAgeOutput" placeholder="Auto-calculated" readonly class="w-full bg-gray-50 border rounded-lg p-2.5 outline-none text-sm text-gray-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Consultation Room *</label>
+                    <select name="room" required class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white">
+                        <option value="">Select Room</option>
+                        <option value="auto" class="font-bold text-blue-600">✨ Auto Assign Room</option>
+                        {% for r in rooms %}
+                            {% if r.active %}
+                                <option value="{{ r.room_num }}">{{ r.id }} ({{ r.doctor }})</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Symptoms *</label>
+                    <textarea name="symptoms" rows="3" required placeholder="Describe patient symptoms..." class="w-full border rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Vital Signs (Optional)</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" name="bp" placeholder="BP: 120/80" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" name="hr" placeholder="HR: 72 bpm" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" name="temp" placeholder="Temp: 37.0°C" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" name="rr" placeholder="Resp Rate: 20 bpm" class="border rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 border-t mt-4">
+                <label class="flex items-center cursor-pointer" title="Places patient at the front of the queue">
+                    <span class="mr-3 text-sm font-medium text-gray-700">Priority Patient</span>
+                    <div class="relative">
+                        <input type="checkbox" name="priority" class="sr-only" onchange="document.getElementById('dashDot').classList.toggle('translate-x-4'); document.getElementById('dashBg').classList.toggle('bg-blue-600'); document.getElementById('dashBg').classList.toggle('bg-gray-300');">
+                        <div id="dashBg" class="block bg-gray-300 w-10 h-6 rounded-full transition"></div>
+                        <div id="dashDot" class="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition transform"></div>
+                    </div>
+                </label>
+                <div class="space-x-3">
+                    <button type="reset" class="px-5 py-2.5 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Clear</button>
+                    <button type="button" onclick="confirmRegistration('dashRegForm', 'dashNameInput')" class="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Register Patient</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% for room in rooms %}
+{% if room.active %}
+<div id="roomModal-{{ room.room_num }}" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-slate-50 rounded-xl shadow-2xl border-2 border-slate-500 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        
+        <div class="bg-slate-800 px-4 py-2 flex justify-end items-center shrink-0">
+            <button onclick="closeModal('{{ room.room_num }}')" class="text-slate-300 hover:text-red-400 transition focus:outline-none" title="Close">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+        
+        <div class="p-6 space-y-5 overflow-y-auto flex-1">
+            
+            <div class="border-b border-slate-200 pb-3 mb-2">
+                <h2 class="text-2xl font-bold text-slate-800">{{ room.id }} Details</h2>
+            </div>
+
+            <div class="bg-white border rounded-lg p-3 shadow-sm inline-flex items-center space-x-3 mb-2">
+                <h3 class="font-bold text-gray-800 text-sm">Doctor Information:</h3>
+                <div class="flex items-center text-green-600 font-semibold text-sm">
+                    <i class="fas fa-user-md mr-1.5"></i> {{ room.doctor }}
+                </div>
+                <span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Online</span>
+            </div>
+
+            <div class="bg-white border rounded-xl overflow-hidden shadow-sm">
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50/50">
+                    <h3 class="font-bold text-gray-800">Patients Added Today</h3>
+                    <span class="bg-blue-50 text-blue-600 text-xs px-3 py-1 rounded-full font-medium">{{ room.patients|length }} Total</span>
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead class="text-gray-500 bg-white border-b text-xs uppercase">
+                        <tr>
+                            <th class="py-3 px-4 font-semibold">Time</th>
+                            <th class="py-3 px-4 font-semibold">Patient Name</th>
+                            <th class="py-3 px-4 font-semibold">IC Number</th>
+                            <th class="py-3 px-4 font-semibold">Status</th>
+                            <th class="py-3 px-4 font-semibold text-right">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for p in room.patients %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 px-4 text-gray-500">{{ p.time }}</td>
+                            <td class="py-3 px-4 font-medium text-gray-800 truncate max-w-[120px]" title="{{ p.name }}">
+                                {% if p.priority %}
+                                    <i class="fas fa-star text-yellow-400 mr-1" title="Priority Patient"></i>
+                                {% endif %}
+                                {{ p.name }}
+                            </td>
+                            <td class="py-3 px-4 text-gray-500">{{ p.ic }}</td>
+                            <td class="py-3 px-4">
+                                {% if p.status == 'Waiting' %}
+                                    <span class="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-1 rounded">Waiting</span>
+                                {% elif p.status == 'Completed' %}
+                                    <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded">Completed</span>
+                                {% else %}
+                                    <span class="bg-gray-100 text-gray-700 text-xs font-bold px-2 py-1 rounded">{{ p.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <button onclick="toggleVitalsRow('{{ room.room_num }}', '{{ loop.index }}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition px-3 py-1.5 rounded-md text-xs font-medium border border-blue-100">View Detail</button>
+                            </td>
+                        </tr>
+                        
+                        <tr id="vitals-row-{{ room.room_num }}-{{ loop.index }}" class="hidden bg-slate-50 border-b border-gray-200">
+                            <td colspan="5" class="p-4">
+                                <div class="mb-4 text-sm text-gray-700 flex justify-between items-start">
+                                    <div><span class="font-bold">Symptoms:</span> {{ p.symptoms }}</div>
+                                    <button onclick="toggleVitalsEdit('{{ p.id }}', this)" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition flex items-center">
+                                        <i class="fas fa-edit mr-1.5"></i> Edit
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="border border-white rounded-lg p-3 text-center bg-white shadow-sm transition">
+                                        <div class="text-gray-500 text-xs font-semibold mb-1"><i class="fas fa-heartbeat text-red-500 mr-1"></i> Heart Rate</div>
+                                        <div class="flex items-center justify-center">
+                                            <input type="text" id="hr-{{ p.id }}" value="{{ p.hr|default('-', true) }}" readonly class="w-14 py-1 text-center font-bold text-lg text-gray-800 bg-transparent border-b-2 border-transparent outline-none transition rounded-t-sm">
+                                            <span class="text-xs font-normal text-gray-500 ml-1">bpm</span>
+                                        </div>
+                                    </div>
+                                    <div class="border border-white rounded-lg p-3 text-center bg-white shadow-sm transition">
+                                        <div class="text-gray-500 text-xs font-semibold mb-1"><i class="fas fa-tint text-blue-500 mr-1"></i> Blood Pressure</div>
+                                        <div class="flex items-center justify-center">
+                                            <input type="text" id="bp-{{ p.id }}" value="{{ p.bp|default('-', true) }}" readonly class="w-20 py-1 text-center font-bold text-lg text-gray-800 bg-transparent border-b-2 border-transparent outline-none transition rounded-t-sm">
+                                            <span class="text-xs font-normal text-gray-500 ml-1">mmHg</span>
+                                        </div>
+                                    </div>
+                                    <div class="border border-white rounded-lg p-3 text-center bg-white shadow-sm transition">
+                                        <div class="text-gray-500 text-xs font-semibold mb-1"><i class="fas fa-lungs text-blue-400 mr-1"></i> Resp. Rate</div>
+                                        <div class="flex items-center justify-center">
+                                            <input type="text" id="rr-{{ p.id }}" value="{{ p.rr|default('-', true) }}" readonly class="w-14 py-1 text-center font-bold text-lg text-gray-800 bg-transparent border-b-2 border-transparent outline-none transition rounded-t-sm">
+                                            <span class="text-xs font-normal text-gray-500 ml-1">bpm</span>
+                                        </div>
+                                    </div>
+                                    <div class="border border-white rounded-lg p-3 text-center bg-white shadow-sm transition">
+                                        <div class="text-gray-500 text-xs font-semibold mb-1"><i class="fas fa-thermometer-half text-red-400 mr-1"></i> Temp.</div>
+                                        <div class="flex items-center justify-center">
+                                            <input type="text" id="temp-{{ p.id }}" value="{{ p.temp|default('-', true) }}" readonly class="w-16 py-1 text-center font-bold text-lg text-gray-800 bg-transparent border-b-2 border-transparent outline-none transition rounded-t-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<div id="confirmModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden flex items-center justify-center z-[60]">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden p-6 text-center">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fas fa-question text-2xl text-blue-600"></i>
+        </div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">Confirm Registration</h3>
+        <p class="text-sm text-gray-500 mb-6">Are you sure you want to register <span id="confirmPatientName" class="font-bold text-gray-900"></span> as a new patient?</p>
+        <div class="flex space-x-3">
+            <button type="button" onclick="closeConfirm()" class="w-1/2 py-2.5 border rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+            <button type="button" onclick="submitForm()" class="w-1/2 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Yes, Confirm</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- Room Filtering Logic ---
+    function filterRooms(filterType) {
+        const rows = document.querySelectorAll('.room-row');
+        const btnActive = document.getElementById('btn-active');
+        const btnAll = document.getElementById('btn-all');
+
+        const activeStyles = "px-4 py-1.5 rounded-md text-sm font-bold bg-white text-blue-700 shadow-sm transition";
+        const inactiveStyles = "px-4 py-1.5 rounded-md text-sm font-medium text-blue-600 hover:bg-white hover:shadow-sm hover:text-blue-700 transition";
+
+        if (filterType === 'active') {
+            btnActive.className = activeStyles;
+            btnAll.className = inactiveStyles;
+            rows.forEach(row => {
+                row.style.display = row.getAttribute('data-active') === 'true' ? '' : 'none';
+            });
+        } else {
+            btnAll.className = activeStyles;
+            btnActive.className = inactiveStyles;
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+        }
+    }
+
+    // Default to 'All' to match your original view
+    document.addEventListener('DOMContentLoaded', () => {
+        filterRooms('all');
+    });
+    // ----------------------------
+
+    function openModal(roomId) { document.getElementById('roomModal-' + roomId).classList.remove('hidden'); }
+    function closeModal(roomId) { document.getElementById('roomModal-' + roomId).classList.add('hidden'); }
+
+    function toggleVitalsRow(roomNum, patientIndex) {
+        const row = document.getElementById(`vitals-row-${roomNum}-${patientIndex}`);
+        row.classList.toggle('hidden');
+    }
+
+    let activeForm = null;
+    function confirmRegistration(formId, inputId) {
+        const nameVal = document.getElementById(inputId).value;
+        if (!nameVal) { alert("Please enter a patient name first."); return; }
+        activeForm = formId;
+        document.getElementById('confirmPatientName').innerText = nameVal;
+        document.getElementById('confirmModal').classList.remove('hidden');
+    }
+    
+    function closeConfirm() { document.getElementById('confirmModal').classList.add('hidden'); }
+    function submitForm() { if (activeForm) document.getElementById(activeForm).submit(); }
+
+    document.getElementById('dashIcInput').addEventListener('input', function(e) {
+        let ic = e.target.value.replace(/[^0-9]/g, '');
+        if(ic.length >= 6) {
+            let year = parseInt(ic.substring(0,2));
+            let fullYear = year > new Date().getFullYear().toString().slice(-2) ? 1900 + year : 2000 + year;
+            document.getElementById('dashAgeOutput').value = new Date().getFullYear() - fullYear + " years old";
+        }
+    });
+
+    // 🚀 NEW: Smart Edit/Save Toggle Logic
+    let editModes = {}; // Keeps track of which patients are in 'edit mode'
+
+    async function toggleVitalsEdit(patientId, btnElement) {
+        const inputs = ['hr', 'bp', 'rr', 'temp'].map(id => document.getElementById(`${id}-${patientId}`));
+        
+        // SWITCH TO EDIT MODE
+        if (!editModes[patientId]) {
+            editModes[patientId] = true;
+            
+            // Change button to Blue 'Save Vitals'
+            btnElement.innerHTML = '<i class="fas fa-save mr-1.5"></i> Save';
+            btnElement.className = "bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition flex items-center";
+            
+            // Unlock inputs and give them a light blue background/border so the nurse knows they are typable
+            inputs.forEach(input => {
+                input.removeAttribute('readonly');
+                input.classList.add('bg-blue-50/50', 'border-blue-300');
+                input.classList.remove('border-transparent', 'bg-transparent');
+            });
+            
+            // Auto-focus the first input (Heart Rate)
+            inputs[0].focus();
+        } 
+        // SAVE TO DATABASE & LOCK
+        else {
+            const hr = inputs[0].value;
+            const bp = inputs[1].value;
+            const rr = inputs[2].value;
+            const temp = inputs[3].value;
+            
+            btnElement.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Saving...';
+            btnElement.disabled = true;
+
+            try {
+                const response = await fetch('/api/update_vitals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id: patientId, hr: hr, bp: bp, rr: rr, temp: temp })
+                });
+                
+                if (response.ok) {
+                    // Success animation
+                    btnElement.innerHTML = '<i class="fas fa-check mr-1.5"></i> Saved!';
+                    btnElement.classList.replace('bg-blue-600', 'bg-green-500');
+                    btnElement.classList.replace('hover:bg-blue-700', 'hover:bg-green-600');
+                    
+                    // Lock inputs and remove blue highlight
+                    inputs.forEach(input => {
+                        input.setAttribute('readonly', true);
+                        input.classList.remove('bg-blue-50/50', 'border-blue-300');
+                        input.classList.add('border-transparent', 'bg-transparent');
+                    });
+                    
+                    // Revert button back to grey 'Edit Vitals' after 1.5 seconds
+                    setTimeout(() => {
+                        editModes[patientId] = false;
+                        btnElement.disabled = false;
+                        btnElement.innerHTML = '<i class="fas fa-edit mr-1.5"></i> Edit Vitals';
+                        btnElement.className = "bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 px-4 py-1.5 rounded-md text-xs font-bold shadow-sm transition flex items-center";
+                    }, 1500);
+                } else {
+                    alert("Failed to update vitals on the server.");
+                    revertToSaveButton(btnElement);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Network error occurred while saving.");
+                revertToSaveButton(btnElement);
+            }
+        }
+    }
+    
+    // Helper function in case the fetch fails
+    function revertToSaveButton(btnElement) {
+        btnElement.innerHTML = '<i class="fas fa-save mr-1.5"></i> Save Vitals';
+        btnElement.disabled = false;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,323 @@
+{% extends 'doctor_base.html' %}
+
+{% block back_button %}
+<button onclick="confirmExit()" class="mr-4 text-gray-400 hover:text-red-500 transition"><i class="fas fa-arrow-left"></i></button>
+{% endblock %}
+{% block header_title %}Mock Consultation Sandbox{% endblock %}
+{% block header_subtitle %}Test your microphone and live transcription without affecting patient records{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center shadow-sm">
+        <div class="w-10 h-10 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mr-4">
+            <i class="fas fa-flask text-lg"></i>
+        </div>
+        <div>
+            <h3 class="font-bold text-yellow-800">Test Environment Active</h3>
+            <p class="text-sm text-yellow-700">No patient data is linked to this session. Transcriptions generated here will not be saved to any medical records.</p>
+        </div>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+        
+        <div class="p-12 flex flex-col items-center justify-center border-b border-gray-100 flex-1 relative bg-white transition-all duration-500" id="audioSection">
+            
+            <div id="initialState" class="text-center transition-all duration-300 transform">
+                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fas fa-microphone text-3xl text-blue-500"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Ready to Start Mock Session</h3>
+                <p class="text-gray-500 text-sm mb-8">Click the button below to enable your microphone and begin testing</p>
+                <button onclick="startSession()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-lg font-bold shadow-md transition transform hover:scale-105 active:scale-95 flex items-center mx-auto">
+                    <i class="far fa-play-circle text-lg mr-2"></i> Start Session
+                </button>
+            </div>
+
+            <div id="activeState" class="hidden w-full flex flex-col items-center justify-center space-y-8">
+                
+                <div class="w-full bg-blue-50/50 rounded-xl h-24 flex items-center justify-center overflow-hidden">
+                    <div id="waveContainer" class="flex items-end justify-center space-x-1.5 w-full px-4 h-16">
+                        </div>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <button id="btnPause" onclick="togglePause()" class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-bold shadow-md transition flex items-center w-40 justify-center">
+                        <i class="fas fa-pause mr-2" id="pauseIcon"></i> <span id="pauseText">Pause</span>
+                    </button>
+                    <button onclick="confirmFinish()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold shadow-md transition flex items-center">
+                        <i class="fas fa-stop-circle mr-2"></i> End Mock Consultation Session
+                    </button>
+                </div>
+            </div>
+
+            <div id="recordingIndicator" class="absolute top-4 right-4 bg-red-50 text-red-600 px-3 py-1.5 rounded-full text-xs font-bold flex items-center hidden shadow-sm border border-red-100">
+                <div class="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse" id="redDot"></div>
+                <span id="recordingStatusText">Recording</span>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 flex flex-col flex-1 min-h-[250px]">
+            <div class="px-6 py-4 flex justify-between items-center bg-white border-b border-gray-100 shadow-sm">
+                <h4 class="font-bold text-gray-800">Live Transcription (Test)</h4>
+                <button id="editToggleBtn" onclick="toggleEdit()" class="text-blue-600 hover:text-blue-800 text-sm font-medium transition flex items-center hidden">
+                    <i class="fas fa-pen mr-1.5 text-xs"></i> Edit
+                </button>
+            </div>
+            <textarea id="transcriptionBox" readonly class="w-full h-full flex-1 p-6 bg-gray-50 outline-none resize-none text-gray-700 leading-relaxed font-medium" placeholder="Speak into your microphone. Test transcription will appear here..."></textarea>
+        </div>
+
+    </div>
+</div>
+
+<div id="exitModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform transition-all scale-95 opacity-0 duration-300" id="exitModalContent">
+        <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-red-100"><i class="fas fa-arrow-left text-2xl text-red-500"></i></div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">Exit Sandbox?</h3>
+        <p class="text-sm text-gray-500 mb-6">Are you sure you want to exit the test environment?</p>
+        <div class="flex space-x-3">
+            <button onclick="closeModal('exitModal')" class="w-1/2 py-2.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition">Stay</button>
+            <a href="/doctor/dashboard" class="w-1/2 py-2.5 bg-red-600 text-white rounded-lg text-sm font-bold hover:bg-red-700 block text-center transition">Exit</a>
+        </div>
+    </div>
+</div>
+
+<div id="finishModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center z-[100]">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform transition-all scale-95 opacity-0 duration-300" id="finishModalContent">
+        <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-100"><i class="far fa-check-circle text-3xl text-blue-600"></i></div>
+        <h3 class="font-bold text-lg text-gray-800 mb-2">End Mock Session?</h3>
+        <p class="text-sm text-gray-500 mb-6">Since this is a test, finishing the session will discard the audio and transcription.</p>
+        <div class="flex space-x-3">
+            <a href="/doctor/dashboard" class="w-1/2 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 block text-center transition">Confirm & Exit</a>
+            <button type="button" onclick="closeModal('finishModal')" class="w-1/2 py-2.5 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // System Variables
+    let isPaused = false;
+    let isEditing = false;
+    
+    // Audio Context Variables
+    let mediaRecorder;
+    let audioContext;
+    let analyser;
+    let dataArray;
+    let animationId;
+    let audioChunks = [];
+
+    // --- Modal Control ---
+    function confirmExit() { openModal('exitModal'); }
+    function confirmFinish() { 
+        if(mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
+        openModal('finishModal'); 
+    }
+    
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById(id + 'Content').classList.remove('scale-95', 'opacity-0');
+            document.getElementById(id + 'Content').classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id + 'Content').classList.remove('scale-100', 'opacity-100');
+        document.getElementById(id + 'Content').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => { document.getElementById(id).classList.add('hidden'); }, 300);
+    }
+
+    // --- Real Microphone Integration ---
+    async function startSession() {
+        try {
+            // Request Real Microphone Access
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Set up MediaRecorder
+// Set up MediaRecorder to capture in chunks
+mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+mediaRecorder.start(4000); // Triggers ondataavailable every 4 seconds
+
+mediaRecorder.ondataavailable = async e => { 
+    audioChunks.push(e.data); 
+    
+    // Send the 4-second chunk to the backend if not paused
+    if (e.data.size > 0 && !isPaused) {
+        const chunkBlob = new Blob([e.data], { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('audio', chunkBlob, 'chunk.webm');
+        
+        try {
+            const response = await fetch('/api/transcribe', { 
+                method: 'POST', 
+                body: formData 
+            });
+            const result = await response.json();
+            
+            if (result.text) {
+                const tBox = document.getElementById('transcriptionBox');
+                // Append the live translated text to the UI
+                tBox.value += result.text + " ";
+                // Auto-scroll to bottom of textbox
+                tBox.scrollTop = tBox.scrollHeight;
+            }
+        } catch (err) {
+            console.error("Transcription chunk failed:", err);
+        }
+    }
+};
+            
+            // Set up Web Audio API for Real-time Visualizer
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 64; 
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+
+            // Swap UI
+            document.getElementById('initialState').classList.add('hidden');
+            document.getElementById('activeState').classList.remove('hidden');
+            document.getElementById('activeState').classList.add('flex');
+            document.getElementById('recordingIndicator').classList.remove('hidden');
+            document.getElementById('editToggleBtn').classList.remove('hidden');
+
+            const tBox = document.getElementById('transcriptionBox');
+            tBox.value = "";
+            
+            setRecordingUIStatus(true);
+            drawRealWaves(); 
+
+            // Mock FAKE transcription incoming text
+            //setTimeout(() => {
+              //  if(!isPaused) { tBox.value += "This is a mock transcription test. The microphone is currently detecting audio successfully.\n\n"; }
+           // }, 3000);
+
+        } catch (err) {
+            alert("Microphone access is required. Please allow microphone permissions in your browser.");
+            console.error("Mic access error:", err);
+        }
+    }
+
+    // --- Real-Time Waveform Drawer ---
+    function drawRealWaves() {
+        if(isPaused) return; 
+        
+        animationId = requestAnimationFrame(drawRealWaves);
+        analyser.getByteFrequencyData(dataArray);
+
+        const container = document.getElementById('waveContainer');
+        
+        // Build the physical DOM bars on first frame
+        if (container.children.length === 0) {
+             for(let i=0; i<25; i++) {
+                 let bar = document.createElement('div');
+                 bar.className = 'w-2 rounded-full transition-all duration-75 ease-out';
+                 container.appendChild(bar);
+             }
+        }
+        
+        // Update heights based on microphone volume frequency
+        const bars = container.children;
+        for(let i=0; i<25; i++) {
+            let val = dataArray[i] || 0;
+            // Map the byte value (0-255) to a pixel height (4px to 60px)
+            let height = Math.max(4, (val / 255) * 60);
+            bars[i].style.height = height + 'px';
+            
+            if(height > 40) bars[i].className = 'w-2 bg-blue-400 rounded-full transition-all duration-75';
+            else bars[i].className = 'w-2 bg-blue-600 rounded-full transition-all duration-75';
+        }
+    }
+
+    // --- Pause/Resume Controls ---
+    function togglePause() {
+        const btn = document.getElementById('btnPause');
+        const icon = document.getElementById('pauseIcon');
+        const text = document.getElementById('pauseText');
+
+        isPaused = !isPaused;
+
+        if (isPaused) {
+            if(mediaRecorder.state === "recording") mediaRecorder.pause();
+            btn.classList.replace('bg-orange-500', 'bg-green-600');
+            btn.classList.replace('hover:bg-orange-600', 'hover:bg-green-700');
+            icon.classList.replace('fa-pause', 'fa-play');
+            text.innerText = "Resume";
+            
+            setRecordingUIStatus(false);
+            cancelAnimationFrame(animationId);
+            flattenWaves(); 
+
+        } else {
+            if(mediaRecorder.state === "paused") mediaRecorder.resume();
+            btn.classList.replace('bg-green-600', 'bg-orange-500');
+            btn.classList.replace('hover:bg-green-700', 'hover:bg-orange-600');
+            icon.classList.replace('fa-play', 'fa-pause');
+            text.innerText = "Pause";
+            
+            setRecordingUIStatus(true);
+            drawRealWaves(); 
+        }
+    }
+
+    function flattenWaves() {
+        const container = document.getElementById('waveContainer');
+        const bars = container.querySelectorAll('div');
+        bars.forEach(bar => { bar.style.height = '4px'; });
+    }
+
+    function setRecordingUIStatus(isRecording) {
+        const indicatorDot = document.getElementById('redDot');
+        const indicatorText = document.getElementById('recordingStatusText');
+        const indicatorBox = document.getElementById('recordingIndicator');
+
+        if (isRecording) {
+            indicatorDot.classList.add('animate-pulse', 'bg-red-500');
+            indicatorDot.classList.remove('bg-gray-400');
+            indicatorText.innerText = "Recording";
+            indicatorText.classList.replace('text-gray-600', 'text-red-600');
+            indicatorBox.classList.replace('bg-gray-100', 'bg-red-50');
+            indicatorBox.classList.replace('border-gray-200', 'border-red-100');
+        } else {
+            indicatorDot.classList.remove('animate-pulse', 'bg-red-500');
+            indicatorDot.classList.add('bg-gray-400');
+            indicatorText.innerText = "Paused";
+            indicatorText.classList.replace('text-red-600', 'text-gray-600');
+            indicatorBox.classList.replace('bg-red-50', 'bg-gray-100');
+            indicatorBox.classList.replace('border-red-100', 'border-gray-200');
+        }
+    }
+
+    // --- Transcription Edit Logic ---
+    function toggleEdit() {
+        const tBox = document.getElementById('transcriptionBox');
+        const btn = document.getElementById('editToggleBtn');
+        isEditing = !isEditing;
+
+        if (isEditing) {
+            tBox.removeAttribute('readonly');
+            tBox.classList.replace('bg-gray-50', 'bg-white');
+            tBox.classList.add('ring-2', 'ring-inset', 'ring-blue-500');
+            tBox.focus();
+            
+            btn.innerHTML = '<i class="fas fa-save mr-1.5 text-xs"></i> Save';
+            btn.classList.replace('text-blue-600', 'text-green-600');
+            btn.classList.replace('hover:text-blue-800', 'hover:text-green-800');
+        } else {
+            tBox.setAttribute('readonly', 'true');
+            tBox.classList.replace('bg-white', 'bg-gray-50');
+            tBox.classList.remove('ring-2', 'ring-inset', 'ring-blue-500');
+            
+            btn.innerHTML = '<i class="fas fa-pen mr-1.5 text-xs"></i> Edit';
+            btn.classList.replace('text-green-600', 'text-blue-600');
+            btn.classList.replace('hover:text-green-800', 'hover:text-blue-800');
+        }
+    }
+</script>
+{% endblock %}

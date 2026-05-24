@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block header_title %}Patient Registration{% endblock %}
+{% block header_subtitle %}Register new or returning patients{% endblock %}
+
+{% block content %}
+<div class="w-full">
+    
+    <div class="sticky top-[72px] bg-slate-50 z-20 pb-4 mb-6 pt-2 -mx-4 md:-mx-6 px-4 md:px-6 border-b border-slate-200">
+        <div class="flex w-full shadow-sm">
+            <button onclick="focusSection('new-patient-sec')" class="flex-1 py-2 bg-white border border-blue-600 text-blue-700 font-bold text-sm hover:bg-blue-50 transition rounded-l-md focus:outline-none">
+                Register New Patient
+            </button>
+            <button onclick="focusSection('existing-patient-sec')" class="flex-1 py-2 bg-white border-y border-r border-blue-600 text-blue-700 font-bold text-sm hover:bg-blue-50 transition rounded-r-md focus:outline-none">
+                Register Existing Patient
+            </button>
+        </div>
+    </div>
+
+    <div id="new-patient-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 mb-10 transition-all duration-500 scroll-mt-32 overflow-hidden">
+        
+        <div class="bg-blue-50 border-b border-blue-100 px-6 py-5 md:px-8">
+            <h2 class="font-bold text-gray-800 text-xl">Register New Patient</h2>
+        </div>
+
+        <div class="p-6 md:p-8">
+            <form id="regForm" action="/register_patient" method="POST" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Patient Name *</label>
+                        <input type="text" name="name" id="nameInput" required placeholder="Enter full name" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Identity Card (IC) *</label>
+                        <input type="text" name="ic" id="icInput" required placeholder="YYMMDD-PB-###G" class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Age</label>
+                        <input type="text" name="age" id="ageOutput" placeholder="Auto-calculated" readonly class="w-full bg-slate-50 border border-slate-300 rounded-md p-2.5 outline-none text-slate-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Consultation Room *</label>
+                        <select name="room" required class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 bg-white text-sm">
+                            <option value="">Select Room</option>
+                            <option value="auto" class="font-bold text-blue-600">✨ Auto Assign Room</option>
+                            {% for r in rooms %}{% if r.active %}<option value="{{ r.room_num }}">{{ r.id }} ({{ r.doctor }})</option>{% endif %}{% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Symptoms *</label>
+                        <textarea name="symptoms" required rows="3" placeholder="Describe patient symptoms..." class="w-full border border-slate-300 rounded-md p-2.5 outline-none focus:border-blue-500 resize-none text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Vital Signs (Optional)</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" name="bp" placeholder="BP: 120/80" class="border border-slate-300 rounded-md p-2 outline-none focus:border-blue-500 text-sm">
+                            <input type="text" name="hr" placeholder="HR: 72 bpm" class="border border-slate-300 rounded-md p-2 outline-none focus:border-blue-500 text-sm">
+                            <input type="text" name="temp" placeholder="Temp: 37.0°C" class="border border-slate-300 rounded-md p-2 outline-none focus:border-blue-500 text-sm">
+                            <input type="text" name="rr" placeholder="Resp: 20 rpm" class="border border-slate-300 rounded-md p-2 outline-none focus:border-blue-500 text-sm">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end pt-4 border-t border-slate-100 mt-4">
+                    <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition">Register New Patient</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="existing-patient-sec" class="bg-white rounded-xl shadow-sm border border-slate-200 transition-all duration-500 scroll-mt-32 overflow-hidden">
+        
+        <div class="bg-blue-50 border-b border-blue-100 px-6 py-5 md:px-8">
+            <h2 class="font-bold text-gray-800 text-xl">Register Existing Patient</h2>
+        </div>
+        
+        <div class="p-6 md:p-8">
+            <div class="mb-6">
+                <input type="text" id="searchExisting" placeholder="Search by IC number or Name..." class="w-full border-2 border-slate-200 rounded-md p-2.5 outline-none focus:border-blue-500 text-sm">
+            </div>
+
+            <div class="space-y-4" id="existingPatientsList">
+                {% for p in history %}
+                <div class="border border-slate-200 rounded-md p-4 bg-slate-50 existing-card hover:shadow-sm transition-shadow">
+                    <form action="/register_patient" method="POST" class="flex flex-col space-y-3">
+                        <input type="hidden" name="name" value="{{ p.name }}">
+                        <input type="hidden" name="ic" value="{{ p.ic }}">
+                        <input type="hidden" name="age" value="{{ p.age }}">
+                        
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-sm patient-name">{{ p.name }}</h4>
+                                <p class="text-[11px] text-slate-500 patient-ic">IC: {{ p.ic }} • Age: {{ p.age }}</p>
+                            </div>
+                            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition tracking-wide shadow-sm">Re-register</button>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1 items-start">
+                            <div class="md:col-span-4">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Symptoms *</label>
+                                <input type="text" name="symptoms" required placeholder="New Symptoms..." class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500">
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Room *</label>
+                                <select name="room" required class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500 bg-white">
+                                    <option value="">Select Room</option>
+                                    <option value="auto">✨ Auto Assign</option>
+                                    {% for r in rooms %}{% if r.active %}<option value="{{ r.room_num }}">{{ r.id }}</option>{% endif %}{% endfor %}
+                                </select>
+                            </div>
+                            <div class="md:col-span-5">
+                                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-1">Vital Signs (Optional)</label>
+                                <div class="grid grid-cols-4 gap-1.5">
+                                    <input type="text" name="bp" placeholder="BP" title="Blood Pressure" class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500 text-center">
+                                    <input type="text" name="hr" placeholder="HR" title="Heart Rate" class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500 text-center">
+                                    <input type="text" name="temp" placeholder="Temp" title="Temperature" class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500 text-center">
+                                    <input type="text" name="rr" placeholder="Resp" title="Respiratory Rate" class="w-full border border-slate-300 rounded p-1.5 text-xs outline-none focus:border-blue-500 text-center">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+                
+                {% if not history %}
+                <p class="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded border border-slate-200">No completed patients found in history.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function focusSection(id) {
+        const el = document.getElementById(id);
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        el.classList.add('ring-2', 'ring-blue-400');
+        setTimeout(() => { el.classList.remove('ring-2', 'ring-blue-400'); }, 1200);
+    }
+
+    document.getElementById('icInput').addEventListener('input', function(e) {
+        let ic = e.target.value.replace(/[^0-9]/g, '');
+        if(ic.length >= 6) {
+            let year = parseInt(ic.substring(0,2));
+            let fullYear = year > new Date().getFullYear().toString().slice(-2) ? 1900 + year : 2000 + year;
+            document.getElementById('ageOutput').value = new Date().getFullYear() - fullYear + " years old";
+        }
+    });
+
+    document.getElementById('searchExisting').addEventListener('keyup', function(e) {
+        let searchStr = e.target.value.toLowerCase();
+        let cards = document.querySelectorAll('.existing-card');
+        cards.forEach(card => {
+            let name = card.querySelector('.patient-name').innerText.toLowerCase();
+            let ic = card.querySelector('.patient-ic').innerText.toLowerCase();
+            card.style.display = (name.includes(searchStr) || ic.includes(searchStr)) ? 'block' : 'none';
+        });
+    });
+</script>
+{% endblock %}
