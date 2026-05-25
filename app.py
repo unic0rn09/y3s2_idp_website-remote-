@@ -167,31 +167,33 @@ def do_login():
 
     if user and check_password_hash(user.password_hash, password) and user.role == request.form.get('role'):
         session['user_id'] = user.id
-        session['user_name'] = user.name # ✅ REQ 5: Sets the name dynamically for frontend displays
+        session['user_name'] = user.name 
         
         if user.role == 'nurse':
             return redirect(url_for('nurse_dashboard'))
             
         elif user.role == 'doctor':
-            # ✅ REQ 4: Dr Lim exception - Always force Room 1 & Online
             if user.email == 'doctor@test.com':
                 user.room = '1'
                 user.status = 'online'
+                
+                # NEW: Claim any pending offline referrals
+                Patient.query.filter_by(room=f"target_{user.id}").update({'room': '1'})
                 db.session.commit()
             else:
                 selected_room = request.form.get('room')
                 if selected_room:
-                    # Reject rooms not in the available list
                     if selected_room not in AVAILABLE_ROOMS:
                         return "Room not available", 400
-                    # Reject rooms already occupied by another doctor
                     occupied = User.query.filter(User.role == 'doctor', User.room == selected_room, User.id != user.id).first()
                     if occupied:
                         return "Room already occupied by another doctor", 400
                     
-                    # ✅ REQ 2 & 3: Lock the room to this doctor and set to online immediately
                     user.room = selected_room
                     user.status = 'online'
+                    
+                    # NEW: Claim any pending offline referrals and push to the newly selected room
+                    Patient.query.filter_by(room=f"target_{user.id}").update({'room': selected_room})
                     db.session.commit()
             return redirect(url_for('doctor_dashboard'))
     return "Invalid email or password", 401
@@ -540,10 +542,15 @@ def consultation_summary(patient_id):
             'ros': record.ros
         })
         
+    # --- NEW: Fetch all doctors except the current one ---
+    all_doctors = User.query.filter(User.role == 'doctor', User.id != doctor.id).all()
+        
     return render_template('consultation_summary.html', 
                            patient=current_patient, 
                            doctor=doctor, 
-                           past_reports=past_reports)
+                           past_reports=past_reports,
+                           all_doctors=all_doctors) # Pass it here
+
 
 @app.route('/doctor/save_draft/<patient_id>', methods=['POST'])
 def save_draft(patient_id):
@@ -625,6 +632,44 @@ def consultation_history():
 def mock_consultation():
     if 'user_id' not in session: return redirect(url_for('login'))
     return render_template('mock_consultation.html', doctor=User.query.get(session['user_id']))
+
+@app.route('/doctor/refer/<patient_id>', methods=['POST'])
+def refer_patient(patient_id):
+    if 'user_id' not in session: 
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    patient = Patient.query.get_or_404(patient_id)
+    target_doc_id = request.form.get('target_doctor')
+    
+    if not target_doc_id:
+        return jsonify({"error": "No target doctor selected"}), 400
+        
+    target_doctor = User.query.get(target_doc_id)
+    if not target_doctor:
+        return jsonify({"error": "Target doctor not found"}), 404
+        
+    # Save the current draft notes before passing them to the next doctor
+    patient.cc = request.form.get('cc', patient.cc)
+    patient.hopi = request.form.get('hopi', patient.hopi)
+    patient.pmh = request.form.get('pmh', patient.pmh)
+    patient.dh = request.form.get('dh', patient.dh)
+    patient.fh = request.form.get('fh', patient.fh)
+    patient.sh = request.form.get('sh', patient.sh)
+    patient.allergies = request.form.get('allergies', patient.allergies)
+    patient.ros = request.form.get('ros', patient.ros)
+    
+    # Assign to target doctor
+    if target_doctor.room:
+        # If doctor is online, send straight to their active room
+        patient.room = target_doctor.room
+    else:
+        # If doctor is offline, assign a temporary pending ID (e.g. "target_3")
+        patient.room = f"target_{target_doctor.id}"
+        
+    patient.status = 'Waiting' # Move back to Waiting status
+    db.session.commit()
+    
+    return jsonify({"status": "success"})
 
 # ==========================================
 #OPEN AI ROUTE
