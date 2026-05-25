@@ -75,10 +75,26 @@
             <div class="px-6 py-4 flex justify-between items-center bg-white border-b border-gray-100 shadow-sm">
                 <h4 class="font-bold text-gray-800 text-sm">Real-time AI Scribe</h4>
                 <div class="flex items-center space-x-4">
-                    <div class="flex bg-gray-100 p-1 rounded-lg">
-                        <button type="button" id="modeNormalBtn" onclick="setTranscriptionMode('normal')" class="px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition">Normal</button>
-                        <button type="button" id="modeKelantanBtn" onclick="setTranscriptionMode('kelantan')" class="px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition">Kelantan</button>
+                    
+                    <div class="flex items-center space-x-3 group relative">
+                        
+                        <div class="relative flex items-center justify-center">
+                            <i class="fas fa-info-circle text-gray-400 hover:text-blue-500 cursor-help text-[15px] transition-colors duration-200"></i>
+                            
+                            <div class="absolute bottom-full mb-2 right-0 w-56 bg-gray-800 text-white text-xs leading-relaxed p-3 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-10">
+                                When Kelantan mode is turned on, the AI will understand and transcribe the Bahasa Kelantan dialect.
+                                <div class="absolute -bottom-1 right-[5px] w-2.5 h-2.5 bg-gray-800 transform rotate-45"></div>
+                            </div>
+                        </div>
+
+                        <span class="text-xs font-bold text-gray-600">Kelantan Mode</span>
+                        
+                        <button type="button" id="kelantanToggleBtn" onclick="toggleKelantanMode()" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-300 ease-in-out focus:outline-none shadow-inner">
+                            <span id="kelantanToggleKnob" aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 translate-x-0 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out"></span>
+                        </button>
+                        
                     </div>
+
                     <button id="editToggleBtn" onclick="toggleEdit()" class="text-blue-600 hover:text-blue-800 text-sm font-medium transition flex items-center hidden">
                         <i class="fas fa-pen mr-1.5 text-xs"></i> Edit
                     </button>
@@ -115,20 +131,30 @@
     let isEditing = false;
     let isFinishing = false;
     let pendingUploads = 0;
+    let isSubmittingFinal = false;
     let chunkCounter = 0;
-    let currentTranscriptionMode = "normal";
+    
+    // NEW: Default is always normal mode (Rojak). Resets automatically on page load.
+    let currentTranscriptionMode = "normal"; 
 
-    function setTranscriptionMode(mode) {
-        currentTranscriptionMode = mode;
-        const btnNormal = document.getElementById('modeNormalBtn');
-        const btnKelantan = document.getElementById('modeKelantanBtn');
-        
-        if (mode === 'normal') {
-            btnNormal.className = "px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition";
-            btnKelantan.className = "px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition";
+    // NEW: Toggle Logic
+    function toggleKelantanMode() {
+        const toggleBtn = document.getElementById('kelantanToggleBtn');
+        const toggleKnob = document.getElementById('kelantanToggleKnob');
+
+        // Prevent changing modes if the session has already started (button disabled)
+        if (toggleBtn.disabled) return;
+
+        if (currentTranscriptionMode === "normal") {
+            // Turn ON -> Kelantan Mode
+            currentTranscriptionMode = "kelantan";
+            toggleBtn.classList.replace('bg-gray-200', 'bg-green-500');
+            toggleKnob.classList.replace('translate-x-0', 'translate-x-5');
         } else {
-            btnKelantan.className = "px-3 py-1 rounded text-xs font-bold bg-white text-blue-700 shadow-sm transition";
-            btnNormal.className = "px-3 py-1 rounded text-xs font-medium text-gray-500 hover:text-gray-800 transition";
+            // Turn OFF -> Normal Mode
+            currentTranscriptionMode = "normal";
+            toggleBtn.classList.replace('bg-green-500', 'bg-gray-200');
+            toggleKnob.classList.replace('translate-x-5', 'translate-x-0');
         }
     }
     
@@ -179,6 +205,11 @@
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             document.getElementById('requestingState').classList.add('hidden');
+
+            // 🔒 LOCK THE UI: Disable the toggle switch so it can't be changed mid-recording
+            const toggleBtn = document.getElementById('kelantanToggleBtn');
+            toggleBtn.disabled = true;
+            toggleBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             // Set up Web Audio API for Real-time Visualizer
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -235,7 +266,7 @@
                     formData.append('audio', new Blob([e.data], { type: 'audio/webm' }));
                     formData.append('patient_id', "{{ patient.id }}");
                     formData.append('chunk_index', chunkCounter++);
-                    formData.append('mode', currentTranscriptionMode);
+                    formData.append('mode', currentTranscriptionMode); // Sends the selected mode
 
                     try {
                         const response = await fetch('/api/transcribe', { method: 'POST', body: formData });
@@ -286,7 +317,7 @@
         document.getElementById('hiddenTranscription').value = document.getElementById('transcriptionBox').value;
 
         // Force submit if stuck
-        setTimeout(() => { submitFinalForm(); }, 3000);
+        setTimeout(() => { submitFinalForm(); }, 8000);
 
         if (mediaRecorder && mediaRecorder.state !== "inactive") {
             mediaRecorder.stop();
@@ -294,6 +325,9 @@
     });
 
     function submitFinalForm() {
+        if (isSubmittingFinal) return; // Prevent double submission
+        isSubmittingFinal = true;
+        
         window.isUnsaved = false;
         
         // Disable button and show spinner
@@ -308,16 +342,23 @@
 
         console.log("Triggering Final Diarization...");
         
-        // Call the new JSON endpoint
+        // NEW: Grab the final (potentially edited) text from the textbox!
+        const finalText = document.getElementById('transcriptionBox').value;
+        console.log("Sending raw_text to backend. Length:", finalText.length);
+        
+        // Send the text in the JSON body
         fetch('/api/process_final_diarization', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ patient_id: "{{ patient.id }}", mode: currentTranscriptionMode })
+            body: JSON.stringify({ 
+                patient_id: "{{ patient.id }}", 
+                mode: currentTranscriptionMode,
+                raw_text: finalText // <-- Sent to backend here
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === "success") {
-                // If the Jetson finishes successfully, redirect to the summary page!
                 window.location.href = '/doctor/summary/{{ patient.id }}';
             } else {
                 alert("Diarization error: " + data.error);

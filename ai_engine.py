@@ -147,37 +147,39 @@ def _load_audio(path: str, target_sr: int = 16000) -> np.ndarray:
 # ============================================
 # 2. SEMANTIC DIARIZATION ENGINE (The "Who" Logic)
 # ============================================
-def generate_diarized_transcript(patient_id, mode="normal"):
-    """Step 1: Gathers chunks, transcribes them, and performs Semantic Diarization."""
+def generate_diarized_transcript(patient_id, mode="normal", raw_text=None):
+    """Step 1: Uses frontend text (or transcribes chunks as fallback), and performs Semantic Diarization."""
     safe_vid = _to_safe_visit_id(patient_id)
     
-    # Finds ALL chunks mathematically, skipping none
-    pattern = os.path.join(INSTANCE_FOLDER, f"visit_{safe_vid}_chunk*.wav")
-    chunk_files = glob.glob(pattern)
+    # NEW LOGIC: If the frontend sent us the text (including edits), just use that!
+    if raw_text and raw_text.strip():
+        print(f"📝 Step 1: Using live-edited text from frontend ({len(raw_text)} chars). Bypassing chunk re-transcription! ⚡")
+        final_raw_text = raw_text.strip() + "\n\n[END OF CONSULTATION]"
     
-    if not chunk_files:
-        return "No audio found for this consultation."
+    # FALLBACK LOGIC: If no text was sent, process the audio chunks manually
+    else:
+        pattern = os.path.join(INSTANCE_FOLDER, f"visit_{safe_vid}_chunk*.wav")
+        chunk_files = glob.glob(pattern)
         
-    # Sort files by their exact number so the audio is in perfect chronological order
-    chunk_files.sort(key=lambda x: int(re.search(r'chunk(\d+)\.wav', x).group(1)))
-    
-    print("🎙️ Step 1: Transcribing chunks individually to bypass timestamp hallucinations...")
-    
-    raw_text_pieces = []
-    for chunk_path in chunk_files:
-        try:
-            # Transcribe each pre-sliced chunk
-            text = transcribe_wav(chunk_path, mode=mode)
-            if text:
-                raw_text_pieces.append(text)
-        except Exception as e:
-            print(f"❌ Error transcribing {chunk_path}: {e}")
+        if not chunk_files:
+            return "No audio or text found for this consultation."
             
-    # Glue the transcribed TEXT strings together and inject the Anchor
-    raw_text = " ".join(raw_text_pieces).strip()
-    raw_text = raw_text + "\n\n[END OF CONSULTATION]"
+        chunk_files.sort(key=lambda x: int(re.search(r'chunk(\d+)\.wav', x).group(1)))
+        
+        print("🎙️ Step 1: Transcribing chunks individually (Fallback mode)...")
+        
+        raw_text_pieces = []
+        for chunk_path in chunk_files:
+            try:
+                text = transcribe_wav(chunk_path, mode=mode)
+                if text:
+                    raw_text_pieces.append(text)
+            except Exception as e:
+                print(f"❌ Error transcribing {chunk_path}: {e}")
+                
+        final_raw_text = " ".join(raw_text_pieces).strip() + "\n\n[END OF CONSULTATION]"
     
-    print(f"\n--- RAW ASR TEXT ---\n{raw_text}\n--------------------\n")
+    print(f"\n--- RAW ASR TEXT ---\n{final_raw_text}\n--------------------\n")
     
     print("🧠 Step 2: Calling OpenAI API for Semantic Diarization...")
     try:
@@ -186,6 +188,7 @@ def generate_diarized_transcript(patient_id, mode="normal"):
             messages=[
                 {
                     "role": "system", 
+                    # ... [Keep your exact system prompt rules here] ...
                     "content": (
                         "You are a strict medical transcriptionist. Format this raw, messy ASR transcript into a clean 'Doctor:' and 'Patient:' dialogue. Whenever theres a change in speaker, make it into a new line"
                         "CRITICAL RULES:\n"
@@ -194,23 +197,14 @@ def generate_diarized_transcript(patient_id, mode="normal"):
                         "(e.g., changing 'very cold winds' to 'varicose veins', 'weakness insufficient' to 'venous insufficiency', 'kulali' to 'buku lali', 'lift a dent' to 'leave a dent', 'other bawah ubat' to 'ada bawa ubat', 'bulit' to 'kulit').\n"
                         "3. MANDATORY HTML TAGS: Every single time you correct an ASR misheard word, you ABSOLUTELY MUST wrap the corrected word in exact HTML tags. "
                         "Do not skip this HTML formatting. Example: <span class='text-red-600 font-bold'>varicose veins</span>.\n"
-                        "4. THE ANCHOR RULE: The raw text ends with the phrase [END OF CONSULTATION]. You MUST process every single word of the transcript and you are forbidden from stopping until you output the phrase [END OF CONSULTATION] exactly as it appears.\n\n"
-                        "--- EXAMPLE ---\n"
-                        "Raw Input: Doctor family history of very cold winds Patient my mother had very cold winds Doctor that can worsen the weakness issue Patient yes Doctor possible weakness insufficient features [END OF CONSULTATION]\n"
-                        "Expected Output:\n"
-                        "Doctor: Family history of <span class='text-red-600 font-bold'>varicose veins</span>?\n"
-                        "Patient: My mother had <span class='text-red-600 font-bold'>varicose veins</span>.\n"
-                        "Doctor: That can worsen the <span class='text-red-600 font-bold'>venous</span> issue.\n"
-                        "Patient: Yes.\n"
-                        "Doctor: Possible <span class='text-red-600 font-bold'>venous insufficiency</span> features.\n"
-                        "[END OF CONSULTATION]\n"
-                        "--- END OF EXAMPLE ---\n\n"
+                        "4. THE ANCHOR RULE: The raw text ends with the phrase [END OF CONSULTATION]. You MUST process every single word of the transcript and you are forbidden from stopping until you output the phrase [END OF CONSULTATION] exactly as it appears.\n"
+                        "5. DO NOT OMIT ANY TEXT: The input text may contain manual edits or additional notes typed by the doctor. You must include all transcribed text and manual edits in the output dialogue. Do not discard any sentences.\n\n"
                         "Now, process the following transcript exactly like the example above."
                     )
                 },
                 {
                     "role": "user", 
-                    "content": "Raw Input:\n" + raw_text
+                    "content": "Raw Input:\n" + final_raw_text
                 }
             ],
             temperature=0.0,
@@ -221,7 +215,7 @@ def generate_diarized_transcript(patient_id, mode="normal"):
         
     except Exception as e:
         print(f"❌ OpenAI API Error: {e}")
-        return f"OpenAI formatting failed. Raw text:\n\n{raw_text}"
+        return f"OpenAI formatting failed. Raw text:\n\n{final_raw_text}"
         
     return final_transcript
 
@@ -328,12 +322,12 @@ def process_clinical_tasks(labeled_text):
     # Safely turns the string response into a Python dictionary
     return json.loads(response.choices[0].message.content)
 
-def run_post_consultation_pipeline(patient_id, mode="normal"):
-    """Updated to accept patient_id so it can locate the chunk files."""
-    # Step A & B: Get raw text from chunks and Diarize
-    labeled = generate_diarized_transcript(patient_id, mode)
+def run_post_consultation_pipeline(patient_id, mode="normal", raw_text=None):
+    """Updated to accept raw_text from the frontend."""
+    # Step A & B: Get raw text (from frontend or chunks) and Diarize
+    labeled = generate_diarized_transcript(patient_id, mode, raw_text)
     
-    # Step C: Extract medical notes (Leaving untouched as requested!)
+    # Step C: Extract medical notes
     structured = process_clinical_tasks(labeled)
 
     return {

@@ -2,6 +2,8 @@ import os
 # Prevent OpenBLAS memory allocation errors from thread limits on Windows
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["OMP_NUM_THREADS"] = "1"
+# Fix PyTorch CUDA OOM memory fragmentation issue on RTX 4000 GPUs
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 import json 
 import tempfile
@@ -427,13 +429,20 @@ def process_final_diarization():
     data = request.json
     patient_id = data.get("patient_id")
     mode = data.get("mode", "normal")
+    
+    # NEW: Extract the edited text sent from the frontend
+    raw_text = data.get("raw_text", "") 
+    
     patient = Patient.query.get_or_404(patient_id)
 
-    print("⏳ Waiting 3 seconds for final audio chunks to finish uploading...")
-    time.sleep(3)
+    # Only wait for chunks if we are relying on fallback chunk processing
+    if not raw_text:
+        print("⏳ Waiting 3 seconds for final audio chunks to finish uploading...")
+        time.sleep(3)
 
     try:
-        results = run_post_consultation_pipeline(patient_id, mode)
+        # NEW: Pass the raw_text into the pipeline
+        results = run_post_consultation_pipeline(patient_id, mode, raw_text)
         
         patient.transcription = results.get("labeled_transcript", "")
         
@@ -449,7 +458,7 @@ def process_final_diarization():
         
         patient.status = 'Draft'
         db.session.commit()
-        clear_old_audio(str(patient.id))
+        clear_old_audio(str(patient.id)) 
         
         return jsonify({"status": "success"})
 
@@ -458,7 +467,7 @@ def process_final_diarization():
         traceback.print_exc()
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/doctor/dashboard')
 def doctor_dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
@@ -500,7 +509,7 @@ def cancel_live(patient_id):
     patient = Patient.query.get_or_404(patient_id)
     patient.status = 'Waiting'
     db.session.commit()
-    clear_old_audio(str(patient.id))
+    clear_old_audio(str(patient.id)) # 5-second delayed background cleanup
     return redirect(url_for('doctor_dashboard'))
 
 @app.route('/doctor/summary/<patient_id>')
@@ -678,7 +687,7 @@ if __name__ == '__main__':
                     email=u['email'],
                     password_hash=generate_password_hash(u['password']),
                     role=u['role'],
-                    status='offline',
+                    status='online',
                     room=None # Initialize with NO ROOM assigned
                 )
                 
