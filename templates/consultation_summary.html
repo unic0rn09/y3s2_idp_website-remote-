@@ -490,8 +490,8 @@
                 // 1. Show the small pop-out message!
                 alert("The patient has been successfully referred to " + docName + ".");
                 
-                // 2. Safely redirect back to the dashboard
-                window.location.href = "/doctor/dashboard";
+                // 2. Close the modal and stay on the same page
+                document.getElementById('referModal').classList.add('hidden');
             } else {
                 alert("Server Error: The referral could not be processed. Please check your terminal.");
             }

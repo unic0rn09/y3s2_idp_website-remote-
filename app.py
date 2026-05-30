@@ -648,7 +648,7 @@ def refer_patient(patient_id):
     if not target_doctor:
         return jsonify({"error": "Target doctor not found"}), 404
         
-    # Save the current draft notes before passing them to the next doctor
+    # Save the current draft notes for the CURRENT doctor's patient record
     patient.cc = request.form.get('cc', patient.cc)
     patient.hopi = request.form.get('hopi', patient.hopi)
     patient.pmh = request.form.get('pmh', patient.pmh)
@@ -658,18 +658,28 @@ def refer_patient(patient_id):
     patient.allergies = request.form.get('allergies', patient.allergies)
     patient.ros = request.form.get('ros', patient.ros)
     
-    # Assign to target doctor
+    # CREATE a duplicate patient record for the target doctor
+    # This leaves the current patient record with the current doctor so they can still generate their own report.
     if target_doctor.room:
-        # If doctor is online, send straight to their active room
-        patient.room = target_doctor.room
+        new_room = target_doctor.room
     else:
-        # If doctor is offline, assign a temporary pending ID (e.g. "target_3")
-        patient.room = f"target_{target_doctor.id}"
+        new_room = f"target_{target_doctor.id}"
         
-    patient.status = 'Waiting' # Move back to Waiting status
+    referred_patient = Patient(
+        name=patient.name, ic=patient.ic, age=patient.age,
+        room=new_room, symptoms=patient.symptoms, priority=patient.priority,
+        status='Waiting',
+        bp=patient.bp, hr=patient.hr, temp=patient.temp, rr=patient.rr,
+        phone=patient.phone, email=patient.email, address=patient.address,
+        emergency_name=patient.emergency_name,
+        emergency_phone=patient.emergency_phone,
+        emergency_relation=patient.emergency_relation
+    )
+    
+    db.session.add(referred_patient)
     db.session.commit()
     
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "message": "Patient referred successfully. Please generate your report to finalize."})
 
 # ==========================================
 #OPEN AI ROUTE
